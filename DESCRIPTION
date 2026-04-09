@@ -1,0 +1,45 @@
+Package: rblp
+Type: Package
+Title: BLP Demand Estimation for Differentiated Products
+Version: 0.1.0
+Authors@R: c(
+    person("Hyoungchul", "Kim", role = c("aut", "cre"),
+           email = "hchulkim@virginia.edu"),
+    person("Jeff", "Gortmaker", role = "aut",
+           comment = "Author of original pyblp Python package"),
+    person("Chris", "Conlon", role = "aut",
+           comment = "Co-author of pyblp methodology")
+    )
+Description: Estimate, simulate, and analyze demand for differentiated
+    products using BLP-type random coefficients logit models (Berry,
+    Levinsohn, and Pakes, 1995). Features include random coefficient
+    mixed logit, nested logit, micro moments, demand and supply-side
+    estimation via GMM, merger simulation, and counterfactual analysis.
+    Translated from the 'pyblp' Python package by Conlon and Gortmaker
+    (2020) <doi:10.1287/mksc.2023.1440>.
+License: MIT + file LICENSE
+URL: https://github.com/hchulkim/rblp
+BugReports: https://github.com/hchulkim/rblp/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    R6,
+    Matrix,
+    MASS,
+    stats,
+    utils,
+    methods,
+    parallel
+Suggests:
+    testthat (>= 3.0.0),
+    randtoolbox,
+    lhs,
+    knitr,
+    rmarkdown,
+    data.table
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+Config/testthat/edition: 3
