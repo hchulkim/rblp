@@ -183,4 +183,4 @@ est <- sim_problem$solve(method = "1s")
 
 ## License
 
-MIT
+GPL (>= 2)
