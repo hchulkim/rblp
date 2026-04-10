@@ -57,10 +57,4 @@ Useful links:
 \author{
 \strong{Maintainer}: Hyoungchul Kim \email{hchulkim@virginia.edu}
 
-Authors:
-\itemize{
-  \item Jeff Gortmaker (Author of original pyblp Python package)
-  \item Chris Conlon (Co-author of pyblp methodology)
-}
-
 }

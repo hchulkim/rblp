@@ -1,0 +1,320 @@
+---
+title: "Post-Estimation and Merger Simulation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Post-Estimation and Merger Simulation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(rblp.verbose = FALSE)
+```
+
+## Introduction
+
+After estimating a demand model, the structural parameters can be used to compute policy-relevant quantities: elasticities, diversion ratios, consumer surplus, markups, and merger simulations. This vignette demonstrates these post-estimation tools.
+
+We start with a logit model for fast, evaluable examples, then discuss how results extend to the random coefficients case. For estimation details, see `vignette("logit-nested-logit")` and `vignette("random-coefficients")`.
+
+## Setup: Estimate a Logit Model
+
+```{r logit_setup}
+library(rblp)
+
+products <- load_nevo_products()
+
+# Logit with product fixed effects
+f1 <- blp_formulation(~ prices, absorb = ~ product_ids)
+problem <- blp_problem(list(f1), products)
+results <- problem$solve(method = "1s")
+
+cat(sprintf("Price coefficient: %.4f\n", results$beta[1]))
+```
+
+## Elasticities
+
+### Own-Price and Cross-Price Elasticities
+
+The price elasticity matrix $E$ for market $t$ has entries:
+
+$$E_{jk} = \frac{\partial s_j}{\partial p_k} \cdot \frac{p_k}{s_j}$$
+
+- **Diagonal** entries ($E_{jj}$) are own-price elasticities: the percent change in $j$'s share for a 1% increase in $j$'s price. These should be negative.
+- **Off-diagonal** entries ($E_{jk}$, $j \neq k$) are cross-price elasticities: the percent change in $j$'s share for a 1% increase in $k$'s price. In a substitutes market, these are positive.
+
+```{r elasticities}
+# Compute elasticities for the first market
+first_market <- results$problem$unique_market_ids[1]
+E <- results$compute_elasticities(first_market)
+
+cat("Elasticity matrix dimensions:", dim(E), "\n")
+
+# Own-price elasticities (diagonal)
+own_elast <- diag(E)
+cat("\nOwn-price elasticities summary:\n")
+cat(sprintf("  Mean: %.3f\n", mean(own_elast)))
+cat(sprintf("  Min:  %.3f\n", min(own_elast)))
+cat(sprintf("  Max:  %.3f\n", max(own_elast)))
+
+# Cross-price elasticities (first row, first 5 columns)
+cat("\nCross-price elasticities (product 1 w.r.t. products 1-5):\n")
+print(round(E[1, 1:min(5, ncol(E))], 4))
+```
+
+### Logit vs. RC Logit Elasticities
+
+In the plain logit, cross-price elasticities follow the IIA pattern: if product $k$'s price increases, all other products gain share proportionally to their current share. This means a luxury cereal and a budget cereal respond identically to a third product's price change, which is unrealistic.
+
+In the RC logit, cross-price elasticities depend on how similar products are in the random coefficient characteristic space. Products that appeal to similar consumer segments have higher cross-price elasticities, generating realistic substitution patterns.
+
+## Diversion Ratios
+
+The diversion ratio $D_{jk}$ measures: if product $j$ is removed (or its price increases), what fraction of $j$'s lost demand is captured by product $k$?
+
+$$D_{jk} = -\frac{\partial s_k / \partial p_j}{\partial s_j / \partial p_j}$$
+
+Diversion ratios are central to merger analysis. The **upward pricing pressure** (UPP) test for a merger between firms owning products $j$ and $k$ is proportional to $D_{jk} \times m_k$, where $m_k$ is product $k$'s margin.
+
+```{r diversion}
+# Compute diversion ratios for the first market
+D <- results$compute_diversion_ratios(first_market)
+
+cat("Diversion ratio matrix dimensions:", dim(D), "\n")
+
+# Where does demand from product 1 go?
+cat("\nDiversion from product 1 (first 5 products):\n")
+print(round(D[1, 1:min(5, ncol(D))], 4))
+
+# What fraction goes to the outside good?
+cat(sprintf("\nDiversion to outside good from product 1: %.4f\n",
+            1 - sum(D[1, ])))
+```
+
+In the logit model, diversion is proportional to market shares (another manifestation of IIA). In the RC logit, diversion reflects the actual similarity of products to heterogeneous consumers.
+
+## Consumer Surplus
+
+Consumer surplus in the logit family follows the Small-Rosen (1981) log-sum formula:
+
+$$CS_t = \frac{1}{\alpha} \cdot E_i\left[ \log\left(1 + \sum_{j=1}^{J_t} \exp(\delta_{jt} + \mu_{ijt})\right) \right]$$
+
+where $\alpha$ is the (negative) price coefficient (marginal utility of income). In the plain logit, $\mu_{ijt} = 0$ and the expectation is trivial. In the RC logit, the expectation is taken over the simulated consumer population.
+
+```{r consumer_surplus}
+cs <- results$compute_consumer_surplus()
+
+cat("Consumer surplus per market (first 10 markets):\n")
+print(round(cs[1:10], 4))
+
+cat(sprintf("\nMean CS across markets: %.4f\n", mean(cs)))
+cat(sprintf("Std. dev. of CS: %.4f\n", sd(cs)))
+```
+
+Changes in consumer surplus across policy scenarios (e.g., before and after a merger) provide a monetary measure of consumer welfare impact.
+
+## HHI (Herfindahl-Hirschman Index)
+
+The HHI measures market concentration:
+
+$$HHI_t = \sum_{f} \left(\sum_{j \in f} s_{jt}\right)^2 \times 10000$$
+
+where the inner sum aggregates shares within each firm $f$. The HHI ranges from near zero (perfect competition) to 10,000 (monopoly). The U.S. DOJ considers markets with HHI above 2,500 to be highly concentrated.
+
+```{r hhi}
+hhi <- results$compute_hhi()
+
+cat("HHI per market (first 10 markets):\n")
+print(round(hhi[1:10], 0))
+
+cat(sprintf("\nMean HHI: %.0f\n", mean(hhi)))
+```
+
+## Costs and Markups
+
+### Recovering Marginal Costs
+
+Given estimated demand, marginal costs can be backed out from the Nash-Bertrand first-order conditions. In equilibrium, each firm sets prices to satisfy:
+
+$$p_j - mc_j = -\left(\Omega^{-1} s\right)_j$$
+
+where $\Omega$ is the ownership-weighted matrix of share derivatives. Rearranging:
+
+$$mc_j = p_j + \left(\Omega^{-1} s\right)_j$$
+
+```{r costs}
+costs <- results$compute_costs()
+
+cat("Marginal costs (first 10 products):\n")
+print(round(costs[1:10], 4))
+
+cat(sprintf("\nPrice range:  [%.4f, %.4f]\n",
+            min(products$prices), max(products$prices)))
+cat(sprintf("Cost range:   [%.4f, %.4f]\n", min(costs), max(costs)))
+```
+
+### Markups (Lerner Index)
+
+The Lerner index measures the fraction of price that is markup:
+
+$$L_j = \frac{p_j - mc_j}{p_j}$$
+
+```{r markups}
+markups <- results$compute_markups()
+
+cat("Markups (first 10 products):\n")
+print(round(markups[1:10], 4))
+
+cat(sprintf("\nMean markup: %.4f\n", mean(markups)))
+cat(sprintf("Median markup: %.4f\n", median(markups)))
+```
+
+## Merger Simulation
+
+Merger simulation is the central counterfactual exercise in structural IO. The idea: when two firms merge, the merged entity internalizes the cross-price effects between the previously competing products, leading to higher prices.
+
+### Steps
+
+1. **Estimate demand** and recover marginal costs $mc$ under the pre-merger ownership structure
+2. **Update the ownership matrix** to reflect the merger (products of the acquired firm now belong to the acquirer)
+3. **Solve for new equilibrium prices** under the post-merger ownership, holding costs fixed
+4. **Compare** pre- and post-merger prices, shares, and consumer surplus
+
+### Simulation Example
+
+We use the simulation framework for a clean merger example:
+
+```{r merger_setup}
+# Create a balanced panel: 50 markets, 20 products, 4 firms
+id_data <- build_id_data(T = 50, J = 20, F = 4)
+set.seed(42)
+id_data$x <- runif(nrow(id_data), 0, 1)
+
+# Simulate with known parameters
+sim <- blp_simulation(
+  product_formulations = list(blp_formulation(~ prices + x)),
+  product_data = id_data,
+  beta = c(0.5, -2, 0.8),
+  xi_variance = 0.3,
+  seed = 42
+)
+
+sim_data <- sim$replace_endogenous(
+  iteration = blp_iteration("simple", list(atol = 1e-12, max_evaluations = 5000))
+)
+
+# Estimate
+sim_problem <- sim_data$to_problem()
+sim_results <- sim_problem$solve(method = "1s")
+```
+
+Now simulate a merger between firms 2 and 3:
+
+```{r merger_simulate}
+# Create post-merger firm IDs: merge firm 3 into firm 2
+new_firm_ids <- sim_data$product_data$firm_ids
+new_firm_ids[new_firm_ids == 3] <- 2
+
+cat(sprintf("Pre-merger firms:  %s\n", paste(sort(unique(sim_data$product_data$firm_ids)), collapse = ", ")))
+cat(sprintf("Post-merger firms: %s\n", paste(sort(unique(new_firm_ids)), collapse = ", ")))
+
+# Run the merger simulation
+merger <- sim_results$compute_merger(
+  new_firm_ids = new_firm_ids,
+  iteration = blp_iteration("simple", list(atol = 1e-12, max_evaluations = 5000))
+)
+
+cat(sprintf("\nMean price change:   %.2f%%\n", mean(merger$price_change_pct)))
+cat(sprintf("Max price change:    %.2f%%\n", max(merger$price_change_pct)))
+cat(sprintf("Mean CS change:      %.4f\n", mean(merger$delta_cs)))
+```
+
+### Interpreting Merger Results
+
+```{r merger_detail}
+# Which products see the biggest price increases?
+# Products of the merging firms should see larger increases
+merging_products <- sim_data$product_data$firm_ids %in% c(2, 3)
+non_merging <- !merging_products
+
+cat("Price changes by group:\n")
+cat(sprintf("  Merging firms (2 & 3):     mean = %.2f%%\n",
+            mean(merger$price_change_pct[merging_products])))
+cat(sprintf("  Non-merging firms (1 & 4): mean = %.2f%%\n",
+            mean(merger$price_change_pct[non_merging])))
+
+# Consumer surplus change
+cat(sprintf("\nTotal CS change: %.4f\n", sum(merger$delta_cs)))
+cat(sprintf("CS change is %s\n",
+            ifelse(sum(merger$delta_cs) < 0, "negative (consumers harmed)",
+                   "positive (consumers benefit)")))
+```
+
+### Pre-Merger vs. Post-Merger HHI
+
+```{r merger_hhi}
+# Compute pre-merger and post-merger HHI
+hhi_pre <- sim_results$compute_hhi()
+
+cat(sprintf("Pre-merger mean HHI:  %.0f\n", mean(hhi_pre)))
+cat(sprintf("Delta HHI estimate: merging two of four equal firms\n"))
+```
+
+## Specification Tests
+
+### Hansen J-Test
+
+The Hansen J-test checks the validity of the overidentifying restrictions. Under the null that all instruments are valid, the J-statistic is asymptotically chi-squared with degrees of freedom equal to the number of moment conditions minus the number of parameters.
+
+```{r hansen, eval=FALSE}
+# Only meaningful for two-step GMM
+results_2s <- problem$solve(method = "2s")
+j_test <- results_2s$run_hansen_test()
+
+cat(sprintf("J-statistic: %.4f\n", j_test$statistic))
+cat(sprintf("Degrees of freedom: %d\n", j_test$df))
+cat(sprintf("p-value: %.4f\n", j_test$p_value))
+```
+
+A small p-value suggests that at least some instruments may be invalid (correlated with the structural error $\xi$).
+
+### Wald Test
+
+The Wald test can be used to test restrictions on the nonlinear parameters (sigma, pi). For example, to test whether all random coefficient variances are jointly zero (i.e., the logit is adequate):
+
+```{r wald, eval=FALSE}
+# Test H0: all sigma parameters = 0
+n_theta <- length(results$se)
+R <- diag(n_theta)
+r <- rep(0, n_theta)
+
+wald <- results$run_wald_test(R, r)
+cat(sprintf("Wald statistic: %.4f, p-value: %.4f\n",
+            wald$statistic, wald$p_value))
+```
+
+## Summary of Post-Estimation Methods
+
+| Method | What It Computes | Output |
+|---|---|---|
+| `compute_elasticities(market_id)` | $J \times J$ price elasticity matrix | Matrix |
+| `compute_diversion_ratios(market_id)` | $J \times J$ diversion ratio matrix | Matrix |
+| `compute_consumer_surplus()` | Small-Rosen CS per market | Named vector |
+| `compute_hhi()` | HHI per market | Named vector |
+| `compute_costs()` | Marginal costs from Bertrand FOC | Vector (length $N$) |
+| `compute_markups()` | Lerner index $(p - mc)/p$ | Vector (length $N$) |
+| `compute_merger(new_firm_ids)` | Post-merger equilibrium | List |
+| `run_hansen_test()` | Overidentification J-test | List |
+| `run_wald_test(R, r)` | Wald test on parameters | List |
+| `summary_table()` | All parameter estimates with SEs | Data frame |
+
+## References
+
+- Small, K. & Rosen, H. (1981). Applied Welfare Economics with Discrete Choice Models. *Econometrica*, 49(1), 105-130.
+- Werden, G. (1996). A Robust Test for Consumer Welfare Enhancing Mergers Among Sellers of Differentiated Products. *Journal of Industrial Economics*, 44(4), 409-413.
+- Nevo, A. (2000). Mergers with Differentiated Products: The Case of the Ready-to-Eat Cereal Industry. *RAND Journal of Economics*, 31(3), 395-421.
+- Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated Products Demand Estimation with pyblp. *RAND Journal of Economics*, 51(4), 1108-1161.

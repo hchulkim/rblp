@@ -1,3 +1,6 @@
+# Package-level documentation and imports. This file declares the roxygen
+# preamble for the rblp package and defines shared utilities like %||%.
+
 #' @title rblp: BLP Demand Estimation for Differentiated Products
 #'
 #' @description

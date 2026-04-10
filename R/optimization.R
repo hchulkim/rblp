@@ -30,7 +30,13 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
                     iterations = 0L, evaluations = 0L))
       }
 
-      # Cache to avoid double computation when optim calls fn and gr separately
+      # Caching mechanism: R's optim() calls fn(theta) and gr(theta) as separate
+      # function calls, even though they are evaluated at the same theta. In BLP,
+      # each objective evaluation requires solving the full inner-loop contraction
+      # mapping, which is expensive. This cache ensures that when optim requests
+      # the gradient at the same theta it just used for the objective, we return
+      # the already-computed gradient without re-solving the inner loop. The cache
+      # uses an R environment (reference semantics) so it persists across calls.
       cache <- new.env(parent = emptyenv())
       cache$theta <- NULL
       cache$result <- NULL
@@ -49,6 +55,9 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
         cache$result
       }
 
+      # Wrap the cached evaluator into separate fn/gr closures that optim expects.
+      # Both closures share the same cache, so a call to fn followed by gr at the
+      # same theta triggers only one underlying objective evaluation.
       fn <- function(theta) get_cached(theta)$objective
       gr <- NULL
       if (private$compute_gradient_) {
@@ -75,6 +84,12 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
     options_ = NULL,
     compute_gradient_ = TRUE,
 
+    # L-BFGS-B: limited-memory quasi-Newton with box constraints. This is the
+    # default optimizer for BLP because it supports bounds on sigma parameters
+    # (e.g., standard deviations must be non-negative) and uses gradient
+    # information to approximate the Hessian via a limited-memory BFGS update.
+    # factr = 0 disables the default convergence criterion based on relative
+    # function change, relying instead on the projected gradient norm (pgtol).
     optimize_lbfgsb = function(initial, bounds, fn, gr, cache) {
       ctrl <- list(maxit = 1000L, factr = 0, pgtol = 1e-8)
       ctrl <- modifyList(ctrl, private$options_)
@@ -94,6 +109,10 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
       )
     },
 
+    # BFGS: full-memory quasi-Newton without box constraints. More accurate
+    # Hessian approximation than L-BFGS-B (stores the full inverse Hessian
+    # rather than a limited number of update vectors), but cannot enforce
+    # parameter bounds. Suitable when all nonlinear parameters are unrestricted.
     optimize_bfgs = function(initial, fn, gr, cache) {
       ctrl <- list(maxit = 1000L)
       ctrl <- modifyList(ctrl, private$options_)
@@ -111,6 +130,11 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
       )
     },
 
+    # Nelder-Mead (simplex): derivative-free optimizer. Does not use gradient
+    # information, so it is robust to non-smooth or noisy objectives but
+    # converges more slowly. Useful as a diagnostic or when analytic gradients
+    # are unavailable. Higher default maxit because each simplex step is cheap
+    # but many steps are needed for convergence.
     optimize_nm = function(initial, fn, cache) {
       ctrl <- list(maxit = 5000L)
       ctrl <- modifyList(ctrl, private$options_)
@@ -128,6 +152,10 @@ BLPOptimization <- R6::R6Class("BLPOptimization",
       )
     },
 
+    # nlminb: PORT trust-region optimizer with box constraints. An alternative
+    # to L-BFGS-B that uses a trust-region approach rather than line search,
+    # which can be more robust near constraint boundaries. Particularly useful
+    # when parameters are near their bounds (e.g., sigma close to zero).
     optimize_nlminb = function(initial, bounds, fn, gr, cache) {
       ctrl <- list(iter.max = 1000L, eval.max = 2000L)
       ctrl <- modifyList(ctrl, private$options_)

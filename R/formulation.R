@@ -28,16 +28,26 @@ BLPFormulation <- R6::R6Class("BLPFormulation",
     #' @param data Data frame
     #' @return Matrix with named columns
     build_matrix = function(data) {
+      # Convert the R formula into a numeric design matrix using R's standard
+      # model.matrix machinery. This handles intercepts, factor expansion,
+      # interactions, and transformations automatically from the formula syntax.
       mf <- stats::model.frame(private$formula_, data = data, na.action = stats::na.pass)
       mm <- stats::model.matrix(private$formula_, data = mf)
 
-      # Track which columns involve prices or shares
+      # Track which columns involve prices or shares -- needed downstream to
+      # identify endogenous variables that require instruments in the IV/GMM step.
       nms <- colnames(mm)
       private$names_ <- nms
       private$has_prices_ <- any(grepl("prices", nms, fixed = TRUE))
       private$has_shares_ <- any(grepl("shares", nms, fixed = TRUE))
 
-      # Apply fixed-effect demeaning if absorb specified
+      # Frisch-Waugh-Lovell (FWL) demeaning: absorbing fixed effects by
+      # subtracting group means is algebraically equivalent to including a full
+      # set of group dummies but avoids constructing the (potentially huge)
+      # dummy matrix. For each absorbed factor variable, we compute the
+      # within-group mean of every column and subtract it, projecting out the
+      # group-level variation. After demeaning, the intercept is identically
+      # zero and is dropped.
       if (!is.null(private$absorb_)) {
         fe_vars <- all.vars(private$absorb_)
         for (fv in fe_vars) {
@@ -49,7 +59,8 @@ BLPFormulation <- R6::R6Class("BLPFormulation",
             }
           }
         }
-        # Remove intercept after demeaning
+        # The intercept is absorbed into the fixed effects, so remove it
+        # to avoid a column of zeros that would cause rank deficiency.
         ic <- which(colnames(mm) == "(Intercept)")
         if (length(ic) > 0) mm <- mm[, -ic, drop = FALSE]
         private$names_ <- colnames(mm)

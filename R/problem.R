@@ -85,14 +85,23 @@ BLPProblem <- R6::R6Class("BLPProblem",
         rc_types = self$rc_types
       )
 
-      # Initialize delta
+      # Initialize mean utilities (delta) at the closed-form logit solution
+      # delta_jt = log(s_jt) - log(s_0t), which is the analytical inverse of
+      # the logit share equation. This provides a good starting point for the
+      # BLP contraction mapping that will iteratively recover the full
+      # random-coefficients delta from observed shares.
       rho_init <- if (!is.null(rho)) rho else NULL
       delta <- self$compute_logit_delta(rho_init)
 
-      # Build initial weighting matrix
+      # Build the initial GMM weighting matrix W for the first step.
+      # The default is W = (Z'Z/N)^{-1}, which corresponds to the 2SLS weighting.
+      # Under homoskedasticity E[u^2 Z'Z] = sigma^2 * Z'Z, so (Z'Z)^{-1} is
+      # proportional to the efficient weight. This choice makes the first GMM
+      # step equivalent to standard 2SLS/IV estimation. The demand and supply
+      # instrument blocks are stacked via block-diagonal so that each set of
+      # moments is weighted independently.
       W <- initial_W
       if (is.null(W)) {
-        # Default: 2SLS weighting (Z'Z/N)^{-1}
         ZD <- self$products$ZD
         ZS <- self$products$ZS
         Z_blocks <- list()
@@ -122,10 +131,18 @@ BLPProblem <- R6::R6Class("BLPProblem",
         W <- W_new
       }
 
-      # Determine number of GMM steps
+      # Two-step GMM: Step 1 uses the 2SLS weight W = (Z'Z/N)^{-1} to get
+      # consistent (but inefficient) estimates and residuals. Those residuals
+      # are then used to estimate the optimal weighting matrix
+      # W* = S^{-1} = [Var(Z'u)]^{-1}, which is used in Step 2 to produce
+      # efficient estimates. One-step GMM ("1s") skips the weight update.
       n_steps <- if (method == "2s") 2L else 1L
 
-      # Initial compressed theta
+      # Compress the structural parameter matrices (sigma, pi, rho) into a
+      # single vector theta that the optimizer searches over. Only free (nonzero)
+      # elements are included: e.g., the lower triangle of sigma (Cholesky root
+      # of the random coefficient covariance) and nonzero pi entries. Fixed-at-zero
+      # elements are excluded, reducing the dimensionality of the search.
       theta <- params$compress()
       bounds <- params$get_bounds()
 
@@ -140,7 +157,13 @@ BLPProblem <- R6::R6Class("BLPProblem",
       for (step in seq_len(n_steps)) {
         rblp_message(sprintf("\n--- GMM Step %d/%d ---", step, n_steps))
 
-        # Build objective function
+        # Build the GMM objective function that the nonlinear optimizer calls.
+        # For each candidate theta, this: (1) runs the BLP contraction mapping
+        # to recover delta(theta), (2) concentrates out beta via IV regression
+        # to get xi(theta) = delta - X1*beta, (3) forms moments g = Z'xi/N,
+        # and (4) returns the quadratic form g'Wg and its gradient.
+        # The warm-start delta from the previous evaluation (last_delta) is
+        # carried forward to reduce contraction iterations.
         objective_fn <- function(theta_vec) {
           result <- private$compute_progress(
             theta_vec, params, last_delta, W,
@@ -188,7 +211,13 @@ BLPProblem <- R6::R6Class("BLPProblem",
         rblp_message(sprintf("Step %d: objective = %.8e, converged = %s",
                              step, progress$objective, opt_converged))
 
-        # Update W for second step
+        # Between GMM steps, update the weighting matrix to the efficient
+        # (optimal) weight W* = S^{-1}. The moment covariance S estimates
+        # Var(g) = E[Z_i' u_i u_i' Z_i] using the Step-1 residuals.
+        # Under "robust" type, S is heteroskedasticity-consistent (like HC0).
+        # Under "clustered", moments are summed within clusters before forming
+        # the outer product, yielding cluster-robust inference.
+        # This update makes Step 2 the efficient two-step GMM estimator.
         if (step < n_steps) {
           S <- compute_gmm_moment_covariances(
             progress$u_list, progress$Z_list,
@@ -270,12 +299,19 @@ BLPProblem <- R6::R6Class("BLPProblem",
                                  center_moments, micro_moments,
                                  error_behavior, error_punishment,
                                  processes) {
+      # Expand the compressed theta vector back into the full parameter matrices.
+      # sigma is the K2 x K2 lower-triangular Cholesky factor of the random
+      # coefficient covariance (Sigma = sigma * sigma'). pi is the K2 x D
+      # matrix of interactions between product characteristics and consumer
+      # demographics. rho contains nesting parameters for nested logit.
       expanded <- params$expand(theta)
       sigma <- expanded$sigma
       pi_mat <- expanded$pi
       rho <- expanded$rho
 
-      # Get free masks for consistent Jacobian dimensions
+      # Free masks track which elements of sigma/pi are being estimated (nonzero
+      # initial values). This ensures the Jacobian columns line up with the
+      # compressed theta vector: only free parameters get Jacobian columns.
       sigma_free <- params$get_sigma_free()
       pi_free <- params$get_pi_free()
 
@@ -285,11 +321,15 @@ BLPProblem <- R6::R6Class("BLPProblem",
       xi_jacobian_list <- list()
       delta_new <- delta
 
-      # Market-by-market computation
+      # The BLP inner loop is separable across markets: each market t has its
+      # own contraction mapping to invert observed shares s_t into mean
+      # utilities delta_t, conditional on the current nonlinear parameters
+      # theta. This per-market structure is the key computational unit of BLP.
       market_fn <- function(market_id) {
         md <- self$get_market_data(market_id)
 
-        # Create market object
+        # Create a market-level object that holds this market's products,
+        # agents (integration nodes/weights), and the current sigma/pi/rho.
         mkt <- BLPMarket$new(
           products = md$products,
           agents = md$agents,
@@ -303,7 +343,11 @@ BLPProblem <- R6::R6Class("BLPProblem",
           pi_free = pi_free
         )
 
-        # Compute delta via contraction
+        # Run the BLP contraction mapping: delta^{h+1} = delta^h + log(s_obs) - log(s_pred).
+        # This is the "inner loop" of BLP. For any given theta, the contraction
+        # finds the unique delta(theta) such that the model-predicted shares
+        # exactly match observed shares. Berry (1994) showed this map is a
+        # contraction under standard regularity conditions.
         fp_result <- mkt$compute_delta(
           initial_delta = delta[md$indices],
           iteration = iteration,
@@ -312,11 +356,15 @@ BLPProblem <- R6::R6Class("BLPProblem",
 
         delta_t <- fp_result$delta
 
-        # Compute probabilities at converged delta
+        # After convergence, recompute choice probabilities P_ijt at the
+        # converged delta. These are needed for the Jacobian computation.
         mu <- mkt$compute_mu()
         prob_result <- mkt$compute_probabilities(delta_t, mu)
 
-        # Compute Jacobian: d_xi/d_theta
+        # Compute the Jacobian d_xi/d_theta via the implicit function theorem.
+        # Since delta(theta) is defined implicitly by s(delta, theta) = s_obs,
+        # differentiating gives: d_xi/d_theta = -(ds/d_delta)^{-1} * (ds/d_theta).
+        # This Jacobian is needed for the gradient of the GMM objective.
         xi_jac <- NULL
         if (params$n_free() > 0) {
           xi_jac <- mkt$compute_xi_by_theta_jacobian(prob_result)
@@ -368,18 +416,29 @@ BLPProblem <- R6::R6Class("BLPProblem",
         if (!res$fp_converged) fp_converged_all <- FALSE
       }
 
-      # IV regression for demand side
+      # Concentrate out beta via IV/GMM regression: beta = (X1'Z W Z'X1)^{-1} X1'Z W Z'delta.
+      # This is the "outer loop" concentration step. Because beta enters linearly
+      # in delta = X1*beta + xi, we can solve for beta analytically given delta(theta),
+      # reducing the nonlinear search to theta only. The structural error is
+      # xi = delta - X1*beta, and the moment condition is E[Z'xi] = 0.
       X1 <- self$products$X1
       ZD <- self$products$ZD
 
-      # Apply absorb demeaning to delta and xi_jacobian (X1 and ZD already demeaned)
+      # When fixed effects are absorbed via the Frisch-Waugh-Lovell (FWL) theorem,
+      # X1 and ZD were already group-demeaned during economy construction. For
+      # consistency, delta and the xi-Jacobian must also be demeaned by the same
+      # groups before the IV regression. This is equivalent to including the FE
+      # dummies in the regression but is computationally cheaper.
       delta_iv <- delta_new
       if (!is.null(private$absorb_groups_)) {
         grp <- private$absorb_groups_
         gm <- tapply(delta_iv, grp, mean)
         delta_iv <- as.numeric(delta_iv - gm[match(grp, names(gm))])
 
-        # Demean the xi_jacobian within absorb groups (FWL consistency)
+        # The xi-Jacobian (d_xi/d_theta) must also be FWL-demeaned. Without this,
+        # the gradient would be inconsistent with the demeaned moment conditions,
+        # because the Jacobian feeds into G = Z' (d_xi/d_theta) / N which must
+        # be computed in the same demeaned space as the moments g = Z' xi / N.
         if (!is.null(full_xi_jac)) {
           for (j in seq_len(ncol(full_xi_jac))) {
             gm_j <- tapply(full_xi_jac[, j], grp, mean)
@@ -388,11 +447,18 @@ BLPProblem <- R6::R6Class("BLPProblem",
         }
       }
 
-      # Extract demand block of W
+      # Extract the demand block of the GMM weighting matrix. The full W is
+      # block-diagonal with demand (MD x MD) and supply (MS x MS) blocks,
+      # reflecting that demand and supply moment conditions are independent.
       MD <- self$MD
       MS <- self$MS
       W_demand <- W[seq_len(MD), seq_len(MD), drop = FALSE]
 
+      # IV estimation concentrates out beta: given delta(theta), solve the
+      # GMM normal equations for beta, yielding xi = delta - X1*beta.
+      # The residual_jacobian is d_xi/d_theta after accounting for the
+      # concentration: d_xi/d_theta = d_delta/d_theta - X1 * d_beta/d_theta.
+      # This "concentrated Jacobian" is what enters the gradient formula.
       demand_iv <- iv_estimate(X1, ZD, W_demand, delta_iv, full_xi_jac)
       beta <- demand_iv$parameters
       xi <- demand_iv$residuals
@@ -411,7 +477,12 @@ BLPProblem <- R6::R6Class("BLPProblem",
         omega <- supply_iv$residuals
       }
 
-      # Compute moments g = Z' u / N
+      # Form the sample moment vector g = (1/N) * Z' u, which is the empirical
+      # analog of the population moment condition E[Z'u] = 0. For demand,
+      # u = xi (unobserved product quality); for supply, u = omega (cost shock).
+      # The identifying assumption is that instruments Z are uncorrelated with
+      # the structural errors: E[Z_d' xi] = 0 and E[Z_s' omega] = 0.
+      # Stacking demand and supply moments gives the full moment vector.
       u_list <- list(xi)
       Z_list <- list(ZD)
       if (!is.null(omega)) {
@@ -437,11 +508,19 @@ BLPProblem <- R6::R6Class("BLPProblem",
         # moments are already averaged, centering not needed at aggregate level
       }
 
-      # Objective: g' W g
+      # The GMM objective is the quadratic form Q(theta) = g(theta)' W g(theta).
+      # The optimizer minimizes this over theta. At the true parameter values,
+      # g -> 0 in probability, so Q -> 0. Scaling by N gives Q*N which has
+      # better numerical conditioning for optimization.
       objective <- as.numeric(crossprod(g, W %*% g))
       if (scale_objective) objective <- objective * N
 
-      # Gradient
+      # Analytic gradient of the GMM objective: dQ/d_theta = 2 * G' W g,
+      # where G = (1/N) * Z' (d_xi/d_theta) is the Jacobian of the moment
+      # vector with respect to theta. The d_xi/d_theta used here is the
+      # "concentrated" Jacobian that accounts for beta being re-optimized
+      # at each theta. This analytic gradient dramatically speeds convergence
+      # compared to numerical differencing, especially with many parameters.
       gradient <- NULL
       if (params$n_free() > 0 && !is.null(xi_jac_concentrated)) {
         G_parts <- list(crossprod(ZD, xi_jac_concentrated) / N)
@@ -482,14 +561,21 @@ BLPProblem <- R6::R6Class("BLPProblem",
       N <- self$N
       n_theta <- params$n_free()
 
-      # Moment covariances
+      # Estimate the moment covariance matrix S = Var(sqrt(N)*g).
+      # Under "robust" (heteroskedasticity-consistent), S = (1/N) sum_i (Z_i'u_i)(Z_i'u_i)'.
+      # Under "clustered", observations within each cluster are summed before
+      # forming the outer product, allowing for within-cluster correlation.
       S <- compute_gmm_moment_covariances(
         progress$u_list, progress$Z_list,
         type = se_type,
         clustering_ids = self$products$clustering_ids
       )
 
-      # Parameter covariances
+      # GMM sandwich covariance for nonlinear parameters theta:
+      # V(theta) = (1/N) * (G'WG)^{-1} G'W S W'G (G'WG)^{-1}.
+      # Under efficient two-step GMM where W = S^{-1}, this simplifies to
+      # (G'S^{-1}G)^{-1} / N. The "sandwich" form is robust even if the
+      # weighting matrix is not exactly optimal.
       param_cov <- NULL
       se_vec <- NULL
       hessian <- NULL
@@ -502,19 +588,23 @@ BLPProblem <- R6::R6Class("BLPProblem",
         se_vec <- sqrt(pmax(diag(param_cov), 0))
       }
 
-      # Extract SEs for beta and gamma
+      # Standard errors for the concentrated-out linear parameters beta and gamma.
+      # Since beta was solved analytically (not searched over by the optimizer),
+      # its covariance requires a separate sandwich formula. This is the standard
+      # GMM/IV sandwich: V(beta) = (X'Z W Z'X)^{-1} (X'Z W S W Z'X) (X'Z W Z'X)^{-1}.
+      # The "bread" is (X'Z W Z'X)^{-1} and the "meat" is X'Z W S W Z'X.
+      # Under efficient GMM (W = S^{-1}), this simplifies to (X'Z S^{-1} Z'X)^{-1}.
+      # Note: this treats theta as fixed at its estimate; the joint covariance
+      # of (theta, beta) would require the full influence function.
       beta_se <- NULL
       gamma_se <- NULL
       if (!is.null(progress$beta)) {
-        # Beta concentrated out: need sandwich SE
         X1 <- self$products$X1
         ZD <- self$products$ZD
         MD <- self$MD
         W_d <- W[seq_len(MD), seq_len(MD), drop = FALSE]
         bread <- crossprod(X1, ZD) %*% W_d %*% crossprod(ZD, X1)
         bread_inv <- approximately_invert(bread)$inverse
-        # Sandwich for beta: V = (X'ZWZ'X)^{-1} X'ZW S WZ'X (X'ZWZ'X)^{-1}
-        # S_d = sum(g_i g_i')/N, so we multiply by N to get the raw sum
         XZW <- crossprod(X1, ZD) %*% W_d
         S_d <- S[seq_len(MD), seq_len(MD), drop = FALSE]
         beta_cov <- N * bread_inv %*% XZW %*% S_d %*% t(XZW) %*% bread_inv

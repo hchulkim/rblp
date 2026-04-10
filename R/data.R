@@ -1,3 +1,8 @@
+# Dataset documentation and loader functions for the bundled empirical datasets
+# (Nevo 2000 cereal data and BLP 1995 automobile data). These datasets serve
+# as standard benchmarks for validating the BLP estimator against published
+# results and pyblp output.
+
 #' Nevo (2000) Cereal Product Data
 #'
 #' Product-level data from the Nevo (2000) study of the US ready-to-eat cereal

@@ -1,3 +1,9 @@
+# Package-wide configuration options controlling numerical tolerances,
+# verbosity, and computation settings. These options govern behavior across
+# the estimation pipeline -- e.g., singularity detection thresholds for
+# instrument matrices, convergence tolerances for the contraction mapping,
+# and whether to use pseudo-inverses for ill-conditioned systems.
+
 #' Get or Set rblp Package Options
 #'
 #' @param ... Named arguments to set options. If empty, returns all current options.

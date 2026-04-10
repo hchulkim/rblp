@@ -1,0 +1,384 @@
+---
+title: "Simulation and Monte Carlo"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulation and Monte Carlo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(rblp.verbose = FALSE)
+```
+
+## Introduction
+
+Simulation is an essential tool for validating estimators and understanding their properties. The rblp package provides a complete simulation framework:
+
+1. **Specify** a data-generating process (DGP) with known parameters
+2. **Solve** for equilibrium prices and market shares
+3. **Estimate** the model from the simulated data
+4. **Compare** estimated parameters to the true values
+
+This vignette covers single-run roundtrip validation and discusses Monte Carlo study design. For estimation details, see `vignette("logit-nested-logit")` and `vignette("random-coefficients")`.
+
+## The BLPSimulation Class
+
+The `blp_simulation()` function creates a simulation object that holds the true parameters and generates structural errors. The key method `replace_endogenous()` then solves for the Nash-Bertrand equilibrium prices and the resulting market shares.
+
+### Workflow
+
+```
+build_id_data() -> add characteristics -> blp_simulation() -> replace_endogenous() -> to_problem() -> solve()
+```
+
+## Step 1: Build the Panel Structure
+
+The `build_id_data()` function creates a balanced panel with specified numbers of markets, products per market, and firms:
+
+```{r build_panel}
+library(rblp)
+
+# 50 markets, 20 products per market, 4 firms
+id_data <- build_id_data(T = 50, J = 20, F = 4)
+
+cat(sprintf("Total observations: %d\n", nrow(id_data)))
+cat(sprintf("Markets: %d\n", length(unique(id_data$market_ids))))
+cat(sprintf("Products per market: %d\n",
+            nrow(id_data) / length(unique(id_data$market_ids))))
+
+# Products per firm
+table(id_data$firm_ids[id_data$market_ids == 1])
+```
+
+Products are distributed as evenly as possible across firms. If $J$ is not divisible by $F$, the first firms get one extra product.
+
+### Adding Product Characteristics
+
+Product characteristics must be added to the panel before simulation. These should be exogenous (independent of the structural error $\xi$):
+
+```{r add_chars}
+set.seed(42)
+
+# Add an exogenous product characteristic
+id_data$x <- runif(nrow(id_data), 0, 1)
+
+# Can add more characteristics
+id_data$z <- rnorm(nrow(id_data), 0, 0.5)
+
+head(id_data)
+```
+
+## Step 2: Specify the DGP and Simulate
+
+### Logit DGP
+
+The simplest DGP is a logit model with known linear parameters:
+
+```{r logit_sim}
+# True parameters: beta = (intercept, price_coeff, x_coeff)
+sim <- blp_simulation(
+  product_formulations = list(blp_formulation(~ prices + x)),
+  product_data = id_data,
+  beta = c(0.5, -2, 0.8),    # true beta
+  xi_variance = 0.3,          # variance of demand shocks
+  seed = 42
+)
+
+print(sim)
+```
+
+### Solving for Equilibrium
+
+The `replace_endogenous()` method computes equilibrium prices and shares by iterating the Bertrand pricing equation:
+
+$$p = mc + \Omega(p)^{-1} s(p)$$
+
+where $\Omega$ is the ownership-weighted matrix of share derivatives and $s(p)$ are the logit shares evaluated at prices $p$.
+
+```{r equilibrium}
+sim_data <- sim$replace_endogenous(
+  iteration = blp_iteration("simple", list(atol = 1e-12, max_evaluations = 5000))
+)
+
+cat(sprintf("Equilibrium price range:  [%.4f, %.4f]\n",
+            min(sim_data$prices), max(sim_data$prices)))
+cat(sprintf("Equilibrium share range:  [%.6f, %.6f]\n",
+            min(sim_data$shares), max(sim_data$shares)))
+cat(sprintf("Mean price: %.4f\n", mean(sim_data$prices)))
+cat(sprintf("Mean share: %.6f\n", mean(sim_data$shares)))
+```
+
+The `BLPSimulationResults` object contains the equilibrium product data (with updated prices and shares), the marginal costs, and the mean utilities.
+
+## Step 3: Estimate from Simulated Data
+
+The `to_problem()` method converts the simulation results into a `BLPProblem`, automatically constructing BLP instruments from the exogenous characteristics:
+
+```{r estimate}
+sim_problem <- sim_data$to_problem()
+sim_results <- sim_problem$solve(method = "1s")
+
+print(sim_results)
+```
+
+### Comparing to True Values
+
+```{r compare}
+true_beta <- c(0.5, -2, 0.8)
+est_beta <- sim_results$beta
+
+comparison <- data.frame(
+  parameter = c("intercept", "price", "x"),
+  true = true_beta,
+  estimated = round(est_beta, 4),
+  bias = round(est_beta - true_beta, 4),
+  bias_pct = round((est_beta - true_beta) / abs(true_beta) * 100, 2)
+)
+
+print(comparison, row.names = FALSE)
+```
+
+The estimates should be close to the true values, confirming that the estimator is working correctly. Small deviations are expected due to finite-sample variation.
+
+## Instrument Construction
+
+The `to_problem()` method automatically constructs BLP instruments when the product data does not contain pre-computed instruments. You can also construct instruments manually.
+
+### BLP Instruments
+
+Traditional BLP instruments use sums of characteristics of own-firm and rival products:
+
+```{r blp_instruments}
+# Extract the exogenous characteristic
+X_exog <- as.matrix(sim_data$product_data$x)
+
+# Build BLP instruments
+blp_iv <- build_blp_instruments(
+  X = X_exog,
+  market_ids = sim_data$product_data$market_ids,
+  firm_ids = sim_data$product_data$firm_ids
+)
+
+cat(sprintf("BLP instruments: %d columns\n", ncol(blp_iv)))
+cat("Column names:", paste(colnames(blp_iv), collapse = ", "), "\n")
+```
+
+For each characteristic, BLP instruments produce two columns:
+
+- **own**: sum of the characteristic for other products of the same firm
+- **rival**: sum of the characteristic for products of rival firms
+
+These are valid instruments because they are correlated with prices (through the markup equation) but uncorrelated with unobserved quality $\xi$ (since characteristics are exogenous).
+
+### Differentiation Instruments
+
+Gandhi and Houde (2020) propose instruments based on product proximity in characteristic space:
+
+```{r diff_instruments}
+# Local differentiation instruments
+diff_iv_local <- build_differentiation_instruments(
+  X = X_exog,
+  market_ids = sim_data$product_data$market_ids,
+  firm_ids = sim_data$product_data$firm_ids,
+  method = "local"
+)
+
+# Quadratic differentiation instruments
+diff_iv_quad <- build_differentiation_instruments(
+  X = X_exog,
+  market_ids = sim_data$product_data$market_ids,
+  firm_ids = sim_data$product_data$firm_ids,
+  method = "quadratic"
+)
+
+cat(sprintf("Local diff. instruments: %d columns\n", ncol(diff_iv_local)))
+cat(sprintf("Quadratic diff. instruments: %d columns\n", ncol(diff_iv_quad)))
+```
+
+The **local** method counts the number of rival products within one standard deviation of each characteristic, while the **quadratic** method sums the squared distances.
+
+Differentiation instruments can improve identification of random coefficients because they capture the degree of product isolation, which directly affects markups through the substitution patterns.
+
+## Random Coefficients Simulation
+
+For RC logit simulation, specify the sigma matrix (and optionally pi and integration):
+
+```{r rc_sim, eval=FALSE}
+# RC logit DGP with 2 random coefficients
+id_data2 <- build_id_data(T = 30, J = 15, F = 3)
+set.seed(123)
+id_data2$x <- runif(nrow(id_data2), 0, 1)
+
+rc_sim <- blp_simulation(
+  product_formulations = list(
+    blp_formulation(~ prices + x),  # X1: linear
+    blp_formulation(~ x)            # X2: nonlinear (RC on x only)
+  ),
+  product_data = id_data2,
+  beta = c(1.0, -3.0, 1.5),   # true linear parameters
+  sigma = matrix(0.8),         # true sigma for x (1x1)
+  integration = blp_integration("product", size = 5),
+  xi_variance = 0.5,
+  seed = 123
+)
+
+# Solve for equilibrium
+rc_sim_data <- rc_sim$replace_endogenous(
+  iteration = blp_iteration("simple", list(atol = 1e-12, max_evaluations = 5000))
+)
+
+# Estimate
+rc_sim_problem <- rc_sim_data$to_problem()
+rc_sim_results <- rc_sim_problem$solve(
+  sigma = matrix(0.5),  # starting value (not the true value)
+  method = "1s",
+  optimization = blp_optimization("l-bfgs-b",
+    method_options = list(maxit = 200))
+)
+
+# Compare
+cat("True vs. Estimated:\n")
+cat(sprintf("  beta:  true = (1.0, -3.0, 1.5), est = (%s)\n",
+            paste(round(rc_sim_results$beta, 3), collapse = ", ")))
+cat(sprintf("  sigma: true = 0.8, est = %.3f\n", rc_sim_results$sigma[1, 1]))
+```
+
+## Monte Carlo Study Design
+
+A Monte Carlo study repeats the simulate-estimate cycle many times to study the **finite-sample properties** of the estimator: bias, variance, coverage of confidence intervals, etc.
+
+### Design Considerations
+
+1. **Number of replications**: 500--1000 is typical for asymptotic properties; 100 may suffice for debugging
+2. **DGP parameters**: choose values that produce realistic shares and prices
+3. **Market/product structure**: vary $T$ (markets), $J$ (products/market), $F$ (firms) to study how sample size affects performance
+4. **Instrument strength**: compare BLP vs. differentiation instruments
+5. **Integration accuracy**: vary the number of nodes to study simulation error
+6. **Seeds**: use a different seed for each replication but make results reproducible
+
+### Template for a Monte Carlo Study
+
+```{r monte_carlo, eval=FALSE}
+# Monte Carlo study: logit estimator performance
+set.seed(2024)
+n_reps <- 100
+true_beta <- c(0.5, -2, 0.8)
+
+# Storage for results
+estimates <- matrix(NA, n_reps, 3)
+colnames(estimates) <- c("intercept", "price", "x")
+
+for (rep in seq_len(n_reps)) {
+  # 1. Generate data
+  id_data_mc <- build_id_data(T = 50, J = 20, F = 4)
+  id_data_mc$x <- runif(nrow(id_data_mc), 0, 1)
+
+  sim_mc <- blp_simulation(
+    product_formulations = list(blp_formulation(~ prices + x)),
+    product_data = id_data_mc,
+    beta = true_beta,
+    xi_variance = 0.3,
+    seed = rep  # different seed each replication
+  )
+
+  sim_data_mc <- sim_mc$replace_endogenous(
+    iteration = blp_iteration("simple",
+      list(atol = 1e-12, max_evaluations = 5000))
+  )
+
+  # 2. Estimate
+  sim_prob_mc <- sim_data_mc$to_problem()
+  sim_res_mc <- sim_prob_mc$solve(method = "1s")
+
+  # 3. Store
+  estimates[rep, ] <- sim_res_mc$beta
+}
+
+# 4. Summarize
+cat("Monte Carlo Results (", n_reps, " replications)\n")
+cat("========================================\n")
+for (k in seq_len(3)) {
+  cat(sprintf("  %s: true = %.2f, mean = %.4f, bias = %.4f, RMSE = %.4f\n",
+              colnames(estimates)[k],
+              true_beta[k],
+              mean(estimates[, k]),
+              mean(estimates[, k]) - true_beta[k],
+              sqrt(mean((estimates[, k] - true_beta[k])^2))))
+}
+```
+
+### What to Report
+
+A Monte Carlo study should report:
+
+| Metric | Formula | Interpretation |
+|---|---|---|
+| Mean bias | $\bar{\hat{\beta}} - \beta_0$ | Systematic deviation from truth |
+| Median bias | $\text{median}(\hat{\beta}) - \beta_0$ | Robust to outliers |
+| RMSE | $\sqrt{E[(\hat{\beta} - \beta_0)^2]}$ | Overall accuracy |
+| Std. dev. | $\text{sd}(\hat{\beta})$ | Precision of estimator |
+| Coverage | Fraction of CIs containing $\beta_0$ | Should be near 95% for 95% CIs |
+| Rejection rate | Fraction of t-tests rejecting $H_0: \beta = \beta_0$ | Should be near 5% at 5% level |
+
+## Supply-Side Simulation
+
+The simulation framework also supports supply-side estimation with a cost function. This requires a third formulation (X3) and supply instruments:
+
+```{r supply_sim, eval=FALSE}
+# DGP with supply side
+id_data_supply <- build_id_data(T = 30, J = 15, F = 3)
+set.seed(99)
+id_data_supply$x <- runif(nrow(id_data_supply), 0, 1)
+id_data_supply$w <- runif(nrow(id_data_supply), 0.5, 1.5)  # cost shifter
+
+supply_sim <- blp_simulation(
+  product_formulations = list(
+    blp_formulation(~ prices + x),   # X1: demand
+    blp_formulation(~ x),            # X2: RC on x
+    blp_formulation(~ x + w)         # X3: cost function
+  ),
+  product_data = id_data_supply,
+  beta = c(1.0, -3.0, 1.5),
+  sigma = matrix(0.5),
+  gamma = c(0.5, 0.3, 0.8),   # true cost parameters
+  integration = blp_integration("product", size = 5),
+  xi_variance = 0.3,
+  omega_variance = 0.2,
+  correlation = 0.7,  # correlation between xi and omega
+  seed = 99
+)
+
+supply_data <- supply_sim$replace_endogenous()
+
+# The resulting problem will include supply-side estimation
+supply_problem <- supply_data$to_problem()
+```
+
+## Summary
+
+The simulation framework in rblp provides a complete toolkit for:
+
+- **Validation**: confirm that the estimator recovers known parameters
+- **Power analysis**: how many markets/products are needed for acceptable precision?
+- **Instrument comparison**: which instruments perform better in finite samples?
+- **Robustness**: how sensitive are results to DGP assumptions?
+
+| Function | Purpose |
+|---|---|
+| `build_id_data(T, J, F)` | Create balanced panel structure |
+| `blp_simulation(...)` | Specify DGP with true parameters |
+| `sim$replace_endogenous()` | Solve for equilibrium prices/shares |
+| `sim_data$to_problem()` | Convert to estimation problem |
+| `build_blp_instruments()` | Traditional BLP instruments |
+| `build_differentiation_instruments()` | Gandhi-Houde instruments |
+
+## References
+
+- Berry, S., Levinsohn, J., & Pakes, A. (1995). Automobile Prices in Market Equilibrium. *Econometrica*, 63(4), 841-890.
+- Gandhi, A. & Houde, J.-F. (2020). Measuring Substitution Patterns in Differentiated-Products Industries. NBER Working Paper.
+- Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated Products Demand Estimation with pyblp. *RAND Journal of Economics*, 51(4), 1108-1161.

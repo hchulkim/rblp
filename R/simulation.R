@@ -38,6 +38,13 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
     #' @param rc_types Character vector of RC types
     #' @param costs_type "linear" or "log"
     #' @param seed Random seed
+    #
+    # Sets up the data-generating process (DGP) for Monte Carlo studies.
+    # The user supplies the TRUE parameter values (beta, sigma, pi, gamma)
+    # that govern the structural model. The simulation then generates
+    # equilibrium data consistent with these parameters, which can be
+    # passed to the estimator to verify that the solver recovers the truth.
+    # This is the standard "estimation roundtrip" test for BLP code.
     initialize = function(product_formulations, product_data,
                           beta, sigma = NULL, pi = NULL,
                           gamma = NULL, rho = NULL,
@@ -48,7 +55,9 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
                           correlation = 0.9,
                           rc_types = NULL, costs_type = "linear",
                           seed = NULL) {
-      # Need shares and prices as placeholders first
+      # Placeholder shares and prices are needed so the parent class
+      # BLPEconomy can build the design matrices X1, X2, X3. The actual
+      # equilibrium values will be computed later in replace_endogenous().
       if (is.null(product_data$shares)) product_data$shares <- rep(0.01, nrow(product_data))
       if (is.null(product_data$prices)) product_data$prices <- rep(1, nrow(product_data))
 
@@ -66,7 +75,11 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
       if (!is.null(seed)) set.seed(seed)
       N <- self$N
 
-      # Draw structural errors
+      # Draw the demand-side structural error xi ~ N(0, xi_variance).
+      # xi captures unobserved product quality (e.g., brand reputation,
+      # advertising) that enters the utility function but is not in X1.
+      # This is the endogeneity source: firms observe xi when setting prices,
+      # creating the E[p * xi] != 0 correlation that necessitates IV.
       if (is.null(xi)) {
         xi <- stats::rnorm(N, 0, sqrt(xi_variance))
       }
@@ -74,14 +87,23 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
 
       if (!is.null(gamma) && self$K3 > 0) {
         if (is.null(omega)) {
-          # Correlated with xi
+          # Draw supply-side error omega correlated with xi. The correlation
+          # (default 0.9) reflects the empirical regularity that products
+          # with high unobserved quality (high xi) also tend to have high
+          # unobserved costs (high omega) -- e.g., premium ingredients.
+          # Constructed via: omega = rho*xi*(sd_omega/sd_xi) + sqrt(1-rho^2)*eps
+          # which yields Corr(xi, omega) = correlation by construction.
           omega <- correlation * xi * sqrt(omega_variance / xi_variance) +
             sqrt(1 - correlation^2) * stats::rnorm(N, 0, sqrt(omega_variance))
         }
         self$omega <- omega
       }
 
-      # Compute initial delta = X1 %*% beta + xi
+      # Compute the initial mean utility: delta_j = X1_j' beta + xi_j.
+      # This is the utility component common to all consumers, before adding
+      # the individual-specific random taste shocks mu_ij. At this stage
+      # prices are placeholders; they will be replaced by the equilibrium
+      # prices computed in replace_endogenous().
       delta <- as.numeric(self$products$X1 %*% beta) + xi
       private$delta_ <- delta
 
@@ -92,6 +114,14 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
     #' @param iteration BLPIteration for fixed-point iteration
     #' @param constant_costs Whether costs are independent of shares
     #' @return A BLPSimulationResults object
+    #
+    # Computes the Nash-Bertrand equilibrium: given marginal costs (from
+    # gamma, X3, omega), find prices such that each multi-product firm's
+    # first-order condition is satisfied simultaneously. The equilibrium
+    # is found by contraction mapping: p_{n+1} = c + markup(p_n). Once
+    # prices converge, equilibrium shares follow from the demand model.
+    # The resulting (prices, shares) pair is the simulated "observed data"
+    # that would be taken to the BLP estimator.
     replace_endogenous = function(iteration = NULL, constant_costs = TRUE) {
       if (is.null(iteration)) iteration <- blp_iteration("simple", list(atol = 1e-12))
 
@@ -105,7 +135,10 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
         md <- self$get_market_data(t)
         idx <- md$indices
 
-        # Compute marginal costs
+        # Compute marginal costs from the supply-side structural equation:
+        # mc_j = X3_j' gamma + omega_j (linear costs), or
+        # mc_j = exp(X3_j' gamma + omega_j) (log costs, ensuring mc > 0).
+        # These are the TRUE costs used by firms in their pricing decisions.
         if (!is.null(self$gamma) && self$K3 > 0) {
           costs_t <- as.numeric(md$products$X3 %*% self$gamma)
           if (!is.null(self$omega)) costs_t <- costs_t + self$omega[idx]
@@ -115,7 +148,10 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
         }
         costs[idx] <- costs_t
 
-        # Set up market for equilibrium
+        # Prepare the market for the equilibrium price search. delta_base
+        # holds the non-price part of mean utility; beta_price is the
+        # linear price coefficient (alpha). The price finder will update
+        # delta as delta = delta_base + alpha * p at each iteration.
         md$products$delta_base <- delta_eq[idx]
         md$products$beta_price <- if (!is.null(md$products$price_col_x1)) {
           self$beta[md$products$price_col_x1]
@@ -132,20 +168,27 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
           costs_type = self$costs_type
         )
 
-        # Find equilibrium prices
+        # Solve for Nash-Bertrand equilibrium prices via contraction mapping:
+        # p_{n+1} = mc - Omega(p_n)^{-1} s(p_n), starting from 1.5 * costs
+        # as an initial guess. Convergence gives the fixed point where each
+        # firm's price equals cost plus the optimal markup given rivals' prices.
         p_eq <- mkt$compute_equilibrium_prices(
           costs_t, iteration, md$products$ownership, costs_t * 1.5
         )
         prices[idx] <- p_eq
 
-        # Compute equilibrium delta
+        # Update mean utility to reflect the equilibrium price: the price
+        # component of delta shifts by alpha * (p_eq - p_placeholder).
         delta_t <- delta_eq[idx]
         if (!is.null(md$products$price_col_x1)) {
           pc <- md$products$price_col_x1
           delta_t <- delta_t + self$beta[pc] * (p_eq - md$products$prices)
         }
 
-        # Compute equilibrium shares
+        # Given equilibrium prices, compute choice probabilities via the
+        # mixed logit: P_ij = exp(delta_j + mu_ij) / (1 + sum_k exp(...)).
+        # Aggregate across the simulated consumer population (weighting by
+        # agent weights) to get equilibrium market shares s_j = sum_i w_i P_ij.
         mu <- mkt$compute_mu()
         prob <- mkt$compute_probabilities(delta_t, mu)
         P <- if (is.list(prob)) prob$probabilities else prob
@@ -153,7 +196,10 @@ BLPSimulation <- R6::R6Class("BLPSimulation",
         delta_eq[idx] <- delta_t
       }
 
-      # Update product data
+      # Replace the placeholder prices and shares with their equilibrium
+      # values. The resulting product_data is a complete simulated dataset
+      # that looks like real data: it contains equilibrium prices (endogenous,
+      # correlated with xi) and market shares, ready for BLP estimation.
       product_data <- self$products$original_data
       product_data$prices <- prices
       product_data$shares <- shares
@@ -212,6 +258,14 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
     #' @param product_formulations Optional override formulations
     #' @param add_instruments Whether to auto-add BLP instruments
     #' @return A BLPProblem object
+    #
+    # Converts the simulated equilibrium data into a BLPProblem that can be
+    # passed to solve(). This is the key step in the "estimation roundtrip":
+    # simulate data with known parameters, estimate the model, and check
+    # that the estimator recovers the truth. If add_instruments = TRUE,
+    # BLP (1995) instruments are automatically constructed -- these are
+    # sums of rival/own-firm exogenous characteristics, which provide
+    # the exclusion restriction identifying the price coefficient.
     to_problem = function(product_formulations = NULL, add_instruments = TRUE) {
       if (is.null(product_formulations)) {
         product_formulations <- self$simulation$product_formulations
@@ -219,11 +273,19 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
 
       pd <- self$product_data
 
-      # Add BLP instruments if needed
+      # Auto-generate BLP instruments from exogenous characteristics if
+      # the user has not supplied them. The identification logic: prices
+      # are endogenous (correlated with xi), so we need instruments that
+      # (a) shift markups (and thus prices) but (b) are uncorrelated with xi.
+      # BLP instruments satisfy this because rival product characteristics
+      # affect the competitive environment (and hence equilibrium markups)
+      # but are exogenous to product j's unobserved quality xi_j.
       if (add_instruments) {
         has_demand_iv <- any(grepl("^demand_instruments", names(pd)))
         has_supply_iv <- any(grepl("^supply_instruments", names(pd)))
 
+        # For demand: exclude price/shares (endogenous) from the instrument
+        # basis, then compute own-firm and rival-firm characteristic sums.
         if (!has_demand_iv) {
           X1 <- product_formulations[[1]]$build_matrix(pd)
           x1_names <- colnames(X1)
@@ -240,6 +302,8 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
           }
         }
 
+        # For supply: analogous instruments from cost-side characteristics
+        # (X3), used to form moment conditions E[Z_s' omega] = 0.
         if (!has_supply_iv && length(product_formulations) >= 3) {
           X3 <- product_formulations[[3]]$build_matrix(pd)
           x3_names <- colnames(X3)

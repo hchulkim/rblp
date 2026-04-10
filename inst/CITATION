@@ -1,0 +1,24 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "rblp: BLP Demand Estimation for Differentiated Products",
+  author   = person("Hyoungchul", "Kim"),
+  year     = "2026",
+  note     = "R package version 0.1.0",
+  url      = "https://github.com/hchulkim/rblp"
+)
+
+bibentry(
+  bibtype  = "Article",
+  title    = "Best Practices for Differentiated Products Demand Estimation with pyblp",
+  author   = c(
+    person("Christopher", "Conlon"),
+    person("Jeff", "Gortmaker")
+  ),
+  journal  = "RAND Journal of Economics",
+  year     = "2020",
+  volume   = "51",
+  number   = "4",
+  pages    = "1108--1161",
+  doi      = "10.1111/1756-2171.12352",
+  note     = "rblp is translated from the pyblp Python package; please cite both rblp and pyblp"
+)

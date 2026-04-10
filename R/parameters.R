@@ -1,6 +1,17 @@
 #' @title BLP Parameter Manager
 #' @description Manages BLP model parameter compression, expansion, bounds, and labels.
 #' @keywords internal
+#
+# Central bookkeeper for the nonlinear parameters of the BLP model (sigma,
+# pi, rho). The GMM optimizer works on a flat "theta" vector, but the model
+# needs structured matrices. This class handles the mapping between the two
+# representations, tracks which elements are free vs. fixed, and stacks
+# bound constraints for box-constrained optimizers like L-BFGS-B.
+#
+# Convention: in the initial sigma/pi/rho supplied by the user,
+#   0   = parameter is FIXED at zero (not estimated),
+#   any non-zero value = parameter is FREE with that value as starting point.
+# This follows pyblp's convention and makes specification concise.
 BLPParameters <- R6::R6Class("BLPParameters",
   public = list(
     K2 = 0L,
@@ -14,13 +25,20 @@ BLPParameters <- R6::R6Class("BLPParameters",
                           sigma_bounds = NULL, pi_bounds = NULL,
                           rho_bounds = NULL, beta_bounds = NULL,
                           gamma_bounds = NULL, rc_types = NULL) {
-      # Sigma: K2 x K2 lower triangular. 0 = fixed, non-zero = free starting value
+      # Sigma: K2 x K2 lower-triangular Cholesky factor of the random
+      # coefficient covariance matrix Omega = sigma %*% t(sigma).
+      # Only the lower triangle (including diagonal) can be free; the upper
+      # triangle is always zero by the Cholesky structure. This
+      # parameterization guarantees that Omega is positive semi-definite
+      # by construction, avoiding constrained optimization on the PSD cone.
+      # Diagonal elements are bounded below at 0 (standard deviations are
+      # non-negative); off-diagonal elements are unconstrained (they
+      # capture taste correlations and can be negative).
       if (!is.null(sigma)) {
         sigma <- as.matrix(sigma)
         self$K2 <- nrow(sigma)
         private$sigma_free_ <- (sigma != 0) & lower.tri(sigma, diag = TRUE)
         private$sigma_values_ <- sigma
-        # Default bounds: diagonal >= 0
         if (is.null(sigma_bounds)) {
           private$sigma_lb_ <- matrix(-Inf, self$K2, self$K2)
           private$sigma_ub_ <- matrix(Inf, self$K2, self$K2)
@@ -31,7 +49,13 @@ BLPParameters <- R6::R6Class("BLPParameters",
         }
       }
 
-      # Pi: K2 x D. 0 = fixed, non-zero = free
+      # Pi: K2 x D matrix of demographic interaction coefficients.
+      # Entry pi[k,d] governs how demographic variable d shifts the random
+      # coefficient on characteristic k. Together with sigma, pi determines
+      # the full individual-level taste deviation:
+      #   mu_ij = X2_j' (sigma * nu_i + pi * d_i)
+      # where nu_i ~ N(0,I) are unobserved taste shocks and d_i are observed
+      # demographics (e.g., income, age). Pi is unconstrained by default.
       if (!is.null(pi)) {
         pi <- as.matrix(pi)
         self$D <- ncol(pi)
@@ -46,7 +70,11 @@ BLPParameters <- R6::R6Class("BLPParameters",
         }
       }
 
-      # Rho: nesting parameters. 0 = fixed, non-zero = free
+      # Rho: nesting parameters for the nested logit component (if used).
+      # rho_h in [0, 1) measures within-nest correlation in the GEV error
+      # structure. rho = 0 reduces to standard logit; rho -> 1 means products
+      # in the same nest are nearly perfect substitutes. Bounded strictly
+      # below 1 (default upper = 0.99) to ensure well-defined choice probs.
       if (!is.null(rho)) {
         rho <- as.numeric(rho)
         self$H <- length(rho)
@@ -61,7 +89,12 @@ BLPParameters <- R6::R6Class("BLPParameters",
         }
       }
 
-      # Beta: concentrated out by default (NA = concentrated)
+      # Beta: linear demand parameters. By default these are "concentrated
+      # out" of the GMM objective (NA = concentrated), meaning they are
+      # recovered analytically by IV/2SLS for each trial value of theta.
+      # This dramatically reduces the dimensionality of the nonlinear
+      # optimization problem from (K1 + K2*(K2+1)/2 + K2*D) to just the
+      # nonlinear parameters, which is the standard BLP approach.
       if (!is.null(beta)) {
         beta <- as.numeric(beta)
         self$K1 <- length(beta)
@@ -70,7 +103,8 @@ BLPParameters <- R6::R6Class("BLPParameters",
         private$beta_values_ <- beta
       }
 
-      # Gamma: concentrated out by default
+      # Gamma: supply-side parameters, also concentrated out by default
+      # via IV regression of recovered marginal costs on cost shifters X3.
       if (!is.null(gamma)) {
         gamma <- as.numeric(gamma)
         self$K3 <- length(gamma)
@@ -83,6 +117,13 @@ BLPParameters <- R6::R6Class("BLPParameters",
       private$build_labels_()
     },
 
+    # Compress: pack the free elements of sigma, pi, rho into a single flat
+    # vector "theta" for the optimizer. The order is always:
+    #   [sigma free entries | pi free entries | rho free entries]
+    # Only elements marked as free (non-zero in the initial specification)
+    # are included; fixed elements stay at zero and are never touched by
+    # the optimizer. This is the vector that L-BFGS-B or other optimizers
+    # see as their decision variable.
     compress = function(sigma = NULL, pi = NULL, rho = NULL,
                         beta = NULL, gamma = NULL) {
       theta <- numeric(0)
@@ -101,6 +142,14 @@ BLPParameters <- R6::R6Class("BLPParameters",
       theta
     },
 
+    # Expand: unpack the flat theta vector back into structured matrices.
+    # This is the inverse of compress(): it takes the optimizer's current
+    # candidate theta, distributes values into the correct positions of
+    # sigma (lower-triangular), pi (full matrix), and rho (vector), while
+    # keeping fixed elements at zero. Called at every GMM objective
+    # evaluation to reconstruct the model parameters from the optimizer's
+    # state. The upper triangle of sigma is explicitly zeroed to maintain
+    # the Cholesky structure.
     expand = function(theta) {
       idx <- 1L
 
@@ -142,6 +191,12 @@ BLPParameters <- R6::R6Class("BLPParameters",
       list(sigma = sigma, pi = pi_mat, rho = rho)
     },
 
+    # Stack the lower and upper bounds for all free parameters into vectors
+    # aligned with the theta vector produced by compress(). The optimizer
+    # (e.g., L-BFGS-B in optim()) uses these directly as box constraints.
+    # The order matches compress(): sigma bounds first, then pi, then rho.
+    # Typical constraints: sigma diagonal >= 0, rho in [0, 0.99], pi
+    # unconstrained (-Inf, Inf).
     get_bounds = function() {
       lower <- upper <- numeric(0)
       if (!is.null(private$sigma_lb_)) {
@@ -188,6 +243,12 @@ BLPParameters <- R6::R6Class("BLPParameters",
     rc_types_ = NULL,
     labels_ = NULL,
 
+    # Build human-readable labels for each free parameter, matching the
+    # order used by compress(). These labels appear in summary_table()
+    # output and diagnostic messages, making it easy to identify which
+    # element of theta corresponds to which structural parameter. Sigma
+    # labels traverse column-major within the lower triangle (matching
+    # R's matrix indexing convention).
     build_labels_ = function() {
       labs <- character(0)
       if (!is.null(private$sigma_free_)) {

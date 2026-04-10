@@ -44,18 +44,26 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
       private$market_indices_ <- split(seq_len(self$N), product_data$market_ids)
       private$product_data_ <- product_data
 
-      # Build X1
+      # Build the design matrices from BLPFormulation objects.
+      # X1 (N x K1): linear demand characteristics that enter mean utility delta.
+      #   These include the constant, product characteristics, and prices.
+      #   The coefficients on X1 (beta) are concentrated out of the GMM objective.
       X1 <- product_formulations[[1]]$build_matrix(product_data)
       self$K1 <- ncol(X1)
 
-      # Build X2 (if specified)
+      # X2 (N x K2): nonlinear demand characteristics whose coefficients vary
+      #   across consumers via random coefficients. X2 often overlaps with X1
+      #   (e.g., price appears in both). X2 enters mu_ij = X2_j' * (sigma*nu_i + pi*D_i).
       X2 <- NULL
       if (n_form >= 2) {
         X2 <- product_formulations[[2]]$build_matrix(product_data)
         self$K2 <- ncol(X2)
       }
 
-      # Build X3 (if specified)
+      # X3 (N x K3): supply-side cost characteristics. If specified, the model
+      #   jointly estimates demand and supply, where marginal cost is
+      #   mc_j = X3_j' * gamma + omega_j. The supply-side moment condition
+      #   is E[Z_s' omega] = 0.
       X3 <- NULL
       if (n_form >= 3) {
         X3 <- product_formulations[[3]]$build_matrix(product_data)
@@ -77,17 +85,25 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
         self$H <- length(self$unique_nesting_ids)
       }
 
-      # Extract excluded instruments
+      # Extract "excluded instruments" -- variables that appear in Z but not in X.
+      # These are the instruments that provide identification for endogenous
+      # regressors (e.g., BLP instruments, Hausman instruments, cost shifters).
+      # Columns named demand_instruments0, demand_instruments1, ... are collected.
       ZD_excluded <- extract_columns(product_data, "demand_instruments")
       ZS_excluded <- extract_columns(product_data, "supply_instruments")
 
-      # Build full instrument matrices
+      # Assemble the full instrument matrix Z = [X_exog, Z_excluded].
+      # The instrument set must include all exogenous regressors from X1
+      # (the "included instruments") plus the excluded instruments. Prices and
+      # shares are excluded from the exogenous columns because prices are
+      # endogenous (correlated with xi) and shares are the dependent variable.
+      # The intercept is included as an instrument since it is exogenous.
+      # This is the standard IV/GMM convention: Z must span the exogenous
+      # part of X so that the IV projection P_Z X has the right column space.
       if (add_exogenous && !is.null(X1)) {
-        # Exogenous X1 columns (not prices, not shares)
         x1_names <- colnames(X1)
         exog_cols <- which(!grepl("prices|shares", x1_names, ignore.case = TRUE) &
                             x1_names != "(Intercept)")
-        # Include intercept if present
         ic <- which(x1_names == "(Intercept)")
         exog_cols <- sort(c(ic, exog_cols))
 
@@ -101,6 +117,8 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
         ZD <- ZD_excluded
       }
 
+      # Supply-side instruments: exogenous cost shifters from X3 plus excluded
+      # supply instruments. The logic mirrors the demand side.
       if (add_exogenous && !is.null(X3) && !is.null(ZS_excluded)) {
         x3_names <- colnames(X3)
         exog_cols3 <- which(!grepl("prices|shares", x3_names, ignore.case = TRUE))
@@ -114,7 +132,15 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
         ZS <- ZS_excluded
       }
 
-      # Apply absorb demeaning to instruments if formulation has absorb
+      # Frisch-Waugh-Lovell (FWL) demeaning for absorbed fixed effects.
+      # When the formulation includes absorb = ~ product_ids (or market_ids),
+      # we subtract group means from X1, ZD, delta, and the xi-Jacobian
+      # rather than including a large dummy matrix. The FWL theorem guarantees
+      # that OLS/IV on the demeaned data yields identical coefficient estimates
+      # and residuals as the full dummy-variable regression, but with much
+      # lower computational cost (O(N) vs O(N*G) where G is the number of groups).
+      # X1 demeaning happens inside build_matrix via the formulation's absorb;
+      # here we demean the instruments ZD so that the IV projection is consistent.
       absorb_form <- product_formulations[[1]]$get_absorb()
       if (!is.null(absorb_form)) {
         fe_vars <- all.vars(absorb_form)
@@ -135,7 +161,13 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
       self$MD <- if (!is.null(ZD)) ncol(ZD) else 0L
       self$MS <- if (!is.null(ZS)) ncol(ZS) else 0L
 
-      # Build ownership matrices
+      # Build the ownership matrix O (N x N block-diagonal). Entry O_{jk} = 1
+      # if products j and k are produced by the same firm in the same market,
+      # 0 otherwise. This matrix encodes multi-product firm structure and is
+      # used in the Bertrand-Nash pricing FOCs: the firm internalizes cross-
+      # product demand effects among its own products when setting prices.
+      # For merger simulation, one simply changes firm_ids to reflect the
+      # post-merger ownership and re-solves for equilibrium prices.
       ownership <- NULL
       if (!is.null(firm_ids)) {
         ownership <- build_ownership_matrix(firm_ids, product_data$market_ids)
@@ -177,11 +209,21 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
       self$costs_type <- costs_type
 
       if (!is.null(integration) && self$K2 > 0) {
-        # Build nodes and weights from integration
+        # Build quadrature nodes and weights to approximate the integral over
+        # the mixing distribution of random coefficients. For "product" (Gauss-
+        # Hermite) integration, each node represents a draw from the standard
+        # normal distribution with an associated probability weight. The share
+        # integral s_j = integral P_ij f(nu) dnu is approximated as
+        # s_j ~ sum_i w_i * P_ij(nu_i). More nodes give higher accuracy but
+        # increase computation; the number of nodes grows as size^K2 (tensor
+        # product), so K2 > 3-4 typically requires Monte Carlo or sparse grids.
         int_result <- integration$build(self$K2)
         n_agents <- nrow(int_result$nodes)
 
-        # Replicate for each market
+        # Replicate the same integration nodes for every market. This assumes
+        # the distribution of unobserved tastes is identical across markets
+        # (the standard BLP assumption). Each market gets its own copy of
+        # nodes/weights so that market-level operations can be parallelized.
         total_I <- n_agents * self$T
         all_nodes <- matrix(0, total_I, self$K2)
         all_weights <- numeric(total_I)
@@ -273,6 +315,13 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
     },
 
     compute_logit_delta = function(rho = NULL) {
+      # Compute the closed-form logit delta as a starting value for the BLP
+      # contraction mapping. For the plain logit (no random coefficients),
+      # Berry (1994) showed that the share equation s_j = exp(delta_j)/(1+sum_k exp(delta_k))
+      # can be analytically inverted to:
+      #   delta_j = log(s_j) - log(s_0)
+      # where s_0 = 1 - sum_j s_j is the outside good share. This is exact
+      # for logit and serves as a warm start for the random coefficients model.
       shares <- self$products$shares
       market_ids <- self$products$market_ids
       delta <- numeric(self$N)
@@ -285,7 +334,12 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
         delta[idx] <- log(s) - log(s0)
 
         if (!is.null(rho) && any(rho != 0)) {
-          # Nested logit: delta = log(s) - log(s0) - rho * (log(s) - log(s_g))
+          # Nested logit inversion (Berry 1994, eq. 3):
+          #   delta_j = log(s_j) - log(s_0) - rho * log(s_j/s_g)
+          # where s_g = sum_{k in g} s_k is the nest-level share. The extra
+          # term -rho*log(s_j/s_g) accounts for the within-nest correlation:
+          # higher rho means more within-nest substitution is captured by
+          # the nesting structure rather than by delta.
           nids <- self$products$nesting_ids[idx]
           if (!is.null(nids)) {
             rho_val <- rho[1]
@@ -296,7 +350,9 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
         }
       }
 
-      # Apply absorb demeaning if set
+      # If fixed effects are absorbed, demean delta for FWL consistency.
+      # This ensures the initial delta lives in the same demeaned space as
+      # the X1 and ZD matrices used in the IV regression.
       if (!is.null(private$absorb_groups_)) {
         grp <- private$absorb_groups_
         gm <- tapply(delta, grp, mean)

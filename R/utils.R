@@ -1,3 +1,7 @@
+# Conditional messaging: only emits diagnostic output when the rblp.verbose
+# option is enabled. This controls progress reporting during estimation
+# (e.g., contraction iterations, objective values) without cluttering output
+# in production or testing contexts.
 #' @keywords internal
 rblp_message <- function(...) {
   if (isTRUE(getOption("rblp.verbose", TRUE))) {
@@ -10,6 +14,11 @@ rblp_message <- function(...) {
 #' @param ids Factor or character vector of group identifiers
 #' @return Named vector or matrix of group sums
 #' @keywords internal
+# Group-level summation: aggregates observations within each market (or other
+# grouping variable). In BLP, many quantities are computed per-market --
+# e.g., summing individual choice probabilities across consumers within a
+# market to obtain predicted market shares, or summing moment contributions
+# within clusters for clustered standard errors.
 groups_sum <- function(x, ids) {
   if (is.matrix(x)) {
     uid <- unique(ids)
@@ -29,6 +38,9 @@ groups_sum <- function(x, ids) {
 #' @param ids Group identifiers
 #' @return Named vector or matrix of group means
 #' @keywords internal
+# Group-level means: computes within-group averages, used primarily in the
+# FWL demeaning step (absorbing fixed effects) and for computing market-level
+# averages of product characteristics.
 groups_mean <- function(x, ids) {
   if (is.matrix(x)) {
     uid <- unique(ids)
@@ -48,6 +60,10 @@ groups_mean <- function(x, ids) {
 #' @param ids Group identifiers for each observation
 #' @return Vector expanded to observation level
 #' @keywords internal
+# Expand group-level values back to observation level: the inverse of
+# aggregation. For example, after computing a market-level statistic
+# (like predicted outside-good share), this broadcasts it back to every
+# product row belonging to that market.
 groups_expand <- function(x_group, ids) {
   uid <- names(x_group)
   if (is.null(uid)) uid <- unique(ids)
@@ -64,11 +80,16 @@ groups_expand <- function(x_group, ids) {
 #' @param prefix Column name prefix (e.g., "demand_instruments")
 #' @return Matrix of matched columns, or NULL if no match
 #' @keywords internal
+# Extract numbered instrument columns from a data frame into a matrix.
+# BLP/pyblp convention names instruments as "demand_instruments0",
+# "demand_instruments1", ..., "demand_instrumentsN". This function matches
+# all columns with the given prefix followed by a numeric suffix, sorts
+# them in numeric order, and stacks them into the instrument matrix Z
+# used in the IV/GMM estimation.
 extract_columns <- function(data, prefix) {
   pattern <- paste0("^", prefix, "\\d+$")
   cols <- grep(pattern, names(data), value = TRUE)
   if (length(cols) == 0) return(NULL)
-  # Sort by numeric suffix
   nums <- as.integer(sub(paste0("^", prefix), "", cols))
   cols <- cols[order(nums)]
   as.matrix(data[, cols, drop = FALSE])
@@ -78,6 +99,12 @@ extract_columns <- function(data, prefix) {
 #' @param x Numeric vector or matrix
 #' @return exp(x) computed with overflow protection
 #' @keywords internal
+# Numerically stable exponentiation using the log-sum-exp trick: subtract
+# the column-wise maximum before exponentiating to prevent overflow (exp(700+)
+# = Inf in double precision). The subtracted constant cancels in the logit
+# choice probability formula s_ij = exp(V_ij) / sum_k exp(V_kj), so this
+# transformation does not change the economic content. Without this, large
+# mean utilities (common with product fixed effects) would cause overflow.
 safe_exp <- function(x) {
   if (is.matrix(x)) {
     col_max <- apply(x, 2, max)
@@ -92,6 +119,12 @@ safe_exp <- function(x) {
 #' @param min_val Minimum value to clamp to
 #' @return log(pmax(x, min_val))
 #' @keywords internal
+# Safe logarithm: clamps the argument away from zero to avoid log(0) = -Inf.
+# This arises in the BLP contraction mapping where we compute log(s_observed)
+# and log(s_predicted); if a predicted share is numerically zero (e.g., a
+# product with very low utility), the log would produce -Inf and corrupt
+# the iteration. The floor of 1e-300 is far below any meaningful share but
+# keeps the computation finite.
 log_safe <- function(x, min_val = 1e-300) {
   log(pmax(x, min_val))
 }
@@ -102,6 +135,12 @@ log_safe <- function(x, min_val = 1e-300) {
 #' @param epsilon Step size
 #' @return Numeric vector of partial derivatives
 #' @keywords internal
+# Central finite differences for gradient verification. Approximates each
+# partial derivative as [f(x + e_i*h) - f(x - e_i*h)] / (2h), which has
+# O(h^2) truncation error (vs. O(h) for forward differences). The default
+# step size h = sqrt(machine epsilon) ~ 1.5e-8 balances truncation error
+# against floating-point cancellation error. Used to validate the analytic
+# gradient of the BLP GMM objective during development and debugging.
 compute_finite_differences <- function(f, x, epsilon = NULL) {
   if (is.null(epsilon)) epsilon <- getOption("rblp.finite_differences_epsilon",
                                               sqrt(.Machine$double.eps))
@@ -142,6 +181,14 @@ format_number <- function(x, digits = NULL) {
 #' @param market_ids Market IDs for each product
 #' @return Block-diagonal ownership matrix (N x N)
 #' @keywords internal
+# Build the block-diagonal ownership matrix O, where O[j,k] = 1 if products
+# j and k are produced by the same firm in the same market, and 0 otherwise.
+# This matrix enters the Bertrand-Nash first-order conditions for pricing:
+#   p = mc - (O * dS/dp)^{-1} s
+# where * is element-wise multiplication. Under a merger, firm_ids change
+# to reflect the merged entity, which changes O and hence equilibrium prices.
+# The block-diagonal structure ensures products in different markets do not
+# interact.
 build_ownership_matrix <- function(firm_ids, market_ids) {
   N <- length(firm_ids)
   ownership <- matrix(0, N, N)

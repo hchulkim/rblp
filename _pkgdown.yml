@@ -5,3 +5,109 @@ template:
 
 development:
   mode: auto
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: "Getting Started"
+        - text: "Getting Started with rblp"
+          href: articles/rblp-tutorial.html
+        - text: "-------"
+        - text: "Model Estimation"
+        - text: "Logit and Nested Logit Models"
+          href: articles/logit-nested-logit.html
+        - text: "Random Coefficients Logit"
+          href: articles/random-coefficients.html
+        - text: "-------"
+        - text: "Analysis"
+        - text: "Post-Estimation and Merger Simulation"
+          href: articles/post-estimation-mergers.html
+        - text: "-------"
+        - text: "Tutorials"
+        - text: "Mixtape Demand Estimation Exercises"
+          href: articles/mixtape-exercises.html
+        - text: "Simulation and Monte Carlo"
+          href: articles/simulation-monte-carlo.html
+
+articles:
+  - title: "Getting Started"
+    navbar: ~
+    contents:
+      - rblp-tutorial
+  - title: "Model Estimation"
+    navbar: ~
+    contents:
+      - logit-nested-logit
+      - random-coefficients
+  - title: "Analysis"
+    navbar: ~
+    contents:
+      - post-estimation-mergers
+  - title: "Tutorials"
+    navbar: ~
+    contents:
+      - mixtape-exercises
+      - simulation-monte-carlo
+
+reference:
+  - title: "Problem Setup"
+    desc: "Define model formulations and create estimation problems."
+    contents:
+      - blp_formulation
+      - BLPFormulation
+      - blp_problem
+      - BLPProblem
+
+  - title: "Estimation Configuration"
+    desc: "Configure integration, iteration, and optimization for estimation."
+    contents:
+      - blp_integration
+      - BLPIntegration
+      - blp_iteration
+      - BLPIteration
+      - blp_optimization
+      - BLPOptimization
+
+  - title: "Results"
+    desc: "Post-estimation analysis: elasticities, surplus, mergers, and more."
+    contents:
+      - BLPResults
+
+  - title: "Simulation"
+    desc: "Simulate equilibrium data for testing and Monte Carlo studies."
+    contents:
+      - blp_simulation
+      - BLPSimulation
+      - BLPSimulationResults
+      - build_id_data
+
+  - title: "Micro Moments"
+    desc: "Match micro-level data moments to model predictions."
+    contents:
+      - micro_dataset
+      - MicroDataset
+      - micro_part
+      - MicroPart
+      - micro_moment
+      - MicroMoment
+
+  - title: "Instruments and Data"
+    desc: "Construct instruments and load bundled datasets."
+    contents:
+      - build_blp_instruments
+      - build_differentiation_instruments
+      - build_custom_ownership
+      - load_nevo_products
+      - load_nevo_agents
+      - load_blp_products
+      - load_blp_agents
+
+  - title: "Options"
+    desc: "Package-wide configuration options."
+    contents:
+      - rblp_options
