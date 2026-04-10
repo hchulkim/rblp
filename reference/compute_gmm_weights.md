@@ -16,4 +16,4 @@ compute_gmm_weights(S)
 
 ## Value
 
-Weighting matrix W = S^-1, symmetrized
+Weighting matrix W = inverse of S, symmetrized

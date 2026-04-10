@@ -16,6 +16,8 @@ Configuration for designing model matrices from R formulas.
 
 - [`BLPFormulation$has_shares()`](#method-BLPFormulation-has_shares)
 
+- [`BLPFormulation$get_absorb()`](#method-BLPFormulation-get_absorb)
+
 - [`BLPFormulation$print()`](#method-BLPFormulation-print)
 
 - [`BLPFormulation$clone()`](#method-BLPFormulation-clone)
@@ -93,6 +95,16 @@ Check if shares are in the formulation
 #### Usage
 
     BLPFormulation$has_shares()
+
+------------------------------------------------------------------------
+
+### Method `get_absorb()`
+
+Get absorb formula (if any)
+
+#### Usage
+
+    BLPFormulation$get_absorb()
 
 ------------------------------------------------------------------------
 

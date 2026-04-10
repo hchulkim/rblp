@@ -16,7 +16,7 @@ log_safe(x, min_val = 9.99999999999999e-301)
 
 - min_val:
 
-  Minimum value to clamp to (default 1e-300)
+  Minimum value to clamp to
 
 ## Value
 

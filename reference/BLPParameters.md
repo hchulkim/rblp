@@ -16,6 +16,10 @@ Manages BLP model parameter compression, expansion, bounds, and labels.
 
 - [`BLPParameters$get_labels()`](#method-BLPParameters-get_labels)
 
+- [`BLPParameters$get_sigma_free()`](#method-BLPParameters-get_sigma_free)
+
+- [`BLPParameters$get_pi_free()`](#method-BLPParameters-get_pi_free)
+
 - [`BLPParameters$n_free()`](#method-BLPParameters-n_free)
 
 - [`BLPParameters$print()`](#method-BLPParameters-print)
@@ -79,6 +83,22 @@ Manages BLP model parameter compression, expansion, bounds, and labels.
 #### Usage
 
     BLPParameters$get_labels()
+
+------------------------------------------------------------------------
+
+### Method `get_sigma_free()`
+
+#### Usage
+
+    BLPParameters$get_sigma_free()
+
+------------------------------------------------------------------------
+
+### Method `get_pi_free()`
+
+#### Usage
+
+    BLPParameters$get_pi_free()
 
 ------------------------------------------------------------------------
 

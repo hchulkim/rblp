@@ -59,7 +59,9 @@ share, delta, markup, and Jacobian computations happen here.
       rho = NULL,
       rc_types = NULL,
       epsilon_scale = 1,
-      costs_type = "linear"
+      costs_type = "linear",
+      sigma_free = NULL,
+      pi_free = NULL
     )
 
 ------------------------------------------------------------------------

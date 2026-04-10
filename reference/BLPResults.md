@@ -156,7 +156,9 @@ Create results object
       fp_converged,
       fp_iterations,
       method,
-      se_type
+      se_type,
+      beta_se = NULL,
+      gamma_se = NULL
     )
 
 ------------------------------------------------------------------------

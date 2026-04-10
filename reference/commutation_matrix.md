@@ -1,6 +1,6 @@
 # Commutation matrix
 
-Returns K_m,n such that K %\*% vec(A) = vec(t(A)) for m x n matrix A.
+Returns K such that K \\
 
 ## Usage
 
