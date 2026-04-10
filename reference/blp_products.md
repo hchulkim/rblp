@@ -68,11 +68,83 @@ A data frame with 2217 rows and the following columns:
 
 - demand_instruments0:
 
-  Excluded demand-side instruments (8 total: 0-7)
+  Excluded demand-side instrument 0
+
+- demand_instruments1:
+
+  Excluded demand-side instrument 1
+
+- demand_instruments2:
+
+  Excluded demand-side instrument 2
+
+- demand_instruments3:
+
+  Excluded demand-side instrument 3
+
+- demand_instruments4:
+
+  Excluded demand-side instrument 4
+
+- demand_instruments5:
+
+  Excluded demand-side instrument 5
+
+- demand_instruments6:
+
+  Excluded demand-side instrument 6
+
+- demand_instruments7:
+
+  Excluded demand-side instrument 7
 
 - supply_instruments0:
 
-  Excluded supply-side instruments (12 total: 0-11)
+  Excluded supply-side instrument 0
+
+- supply_instruments1:
+
+  Excluded supply-side instrument 1
+
+- supply_instruments2:
+
+  Excluded supply-side instrument 2
+
+- supply_instruments3:
+
+  Excluded supply-side instrument 3
+
+- supply_instruments4:
+
+  Excluded supply-side instrument 4
+
+- supply_instruments5:
+
+  Excluded supply-side instrument 5
+
+- supply_instruments6:
+
+  Excluded supply-side instrument 6
+
+- supply_instruments7:
+
+  Excluded supply-side instrument 7
+
+- supply_instruments8:
+
+  Excluded supply-side instrument 8
+
+- supply_instruments9:
+
+  Excluded supply-side instrument 9
+
+- supply_instruments10:
+
+  Excluded supply-side instrument 10
+
+- supply_instruments11:
+
+  Excluded supply-side instrument 11
 
 ## Source
 

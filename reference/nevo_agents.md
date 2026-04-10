@@ -32,7 +32,19 @@ A data frame with 1880 rows and the following columns:
 
 - nodes0:
 
-  Integration nodes (4 total: nodes0-nodes3)
+  Integration node dimension 0
+
+- nodes1:
+
+  Integration node dimension 1
+
+- nodes2:
+
+  Integration node dimension 2
+
+- nodes3:
+
+  Integration node dimension 3
 
 - income:
 

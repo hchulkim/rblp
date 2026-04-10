@@ -5,20 +5,22 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>BLP Demand Estimation for Differentiated Products • rblp</title>
+<title>rblp: BLP Demand Estimation in R • rblp</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="BLP Demand Estimation for Differentiated Products">
-<meta name="description" content="Estimate, simulate, and analyze demand for differentiated products using BLP-type random coefficients logit models (Berry, Levinsohn, and Pakes, 1995). Features include random coefficient mixed logit, nested logit, micro moments, demand and supply-side estimation via GMM, merger simulation, and counterfactual analysis. Translated from the pyblp Python package by Conlon and Gortmaker (2020) &lt;doi:10.1287/mksc.2023.1440&gt;.">
-<meta property="og:description" content="Estimate, simulate, and analyze demand for differentiated products using BLP-type random coefficients logit models (Berry, Levinsohn, and Pakes, 1995). Features include random coefficient mixed logit, nested logit, micro moments, demand and supply-side estimation via GMM, merger simulation, and counterfactual analysis. Translated from the pyblp Python package by Conlon and Gortmaker (2020) &lt;doi:10.1287/mksc.2023.1440&gt;.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="rblp: BLP Demand Estimation in R">
+<meta name="description" content="Estimate, simulate, and analyze demand for differentiated products using BLP random coefficients logit models. Translated from pyblp.
+">
+<meta property="og:description" content="Estimate, simulate, and analyze demand for differentiated products using BLP random coefficients logit models. Translated from pyblp.
+">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="index.html">rblp</a>
 
@@ -35,7 +37,19 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul>
 </li>
       </ul>
@@ -289,9 +303,7 @@
 <div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
-<li>
-<a href="https://opensource.org/licenses/mit-license.php" class="external-link">MIT</a> + file <a href="LICENSE-text.html">LICENSE</a>
-</li>
+<li>GPL (&gt;= 2)</li>
 </ul>
 </div>
 
@@ -307,9 +319,6 @@
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
 <li>Hyoungchul Kim <br><small class="roles"> Author, maintainer </small>   </li>
-<li>Jeff Gortmaker <br><small class="roles"> Author </small>   </li>
-<li>Chris Conlon <br><small class="roles"> Author </small>   </li>
-<li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
 
@@ -320,7 +329,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">

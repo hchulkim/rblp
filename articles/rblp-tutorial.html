@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rblp</a>
 
@@ -33,7 +33,19 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="../articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul>
 </li>
       </ul>
@@ -472,6 +484,36 @@ correspondence:</p>
 </table>
 </div>
 <div class="section level2">
+<h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
+</h2>
+<p>The following vignettes cover specific topics in greater depth:</p>
+<ul>
+<li>
+<strong><code><a href="../articles/logit-nested-logit.html">vignette("logit-nested-logit")</a></code></strong>:
+Derivation and estimation of the logit and nested logit demand models,
+including the logit inversion, price endogeneity, and the role of
+instruments.</li>
+<li>
+<strong><code><a href="../articles/random-coefficients.html">vignette("random-coefficients")</a></code></strong>: The
+random coefficients (mixed) logit model, integration methods, the
+sigma/pi parameterization, and convergence diagnostics.</li>
+<li>
+<strong><code><a href="../articles/post-estimation-mergers.html">vignette("post-estimation-mergers")</a></code></strong>:
+Post-estimation analysis including elasticities, diversion ratios,
+consumer surplus, markups, merger simulation, and specification
+tests.</li>
+<li>
+<strong><code><a href="../articles/mixtape-exercises.html">vignette("mixtape-exercises")</a></code></strong>:
+Exercises inspired by the Mixtape Sessions demand estimation course,
+progressing from OLS logit through IV logit to random coefficients
+logit.</li>
+<li>
+<strong><code><a href="../articles/simulation-monte-carlo.html">vignette("simulation-monte-carlo")</a></code></strong>:
+Using the BLPSimulation class for roundtrip validation, instrument
+construction, and Monte Carlo study design.</li>
+</ul>
+</div>
+<div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <ul>
@@ -492,7 +534,7 @@ of Economics</em>, 51(4), 1108-1161.</li>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">

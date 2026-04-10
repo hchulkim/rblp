@@ -331,6 +331,28 @@ rblp aims to replicate pyblp’s functionality in R. Key correspondence:
 | `Integration('product', size=5)`                 | `blp_integration("product", size = 5)`              |
 | `Simulation(...)`                                | `blp_simulation(...)`                               |
 
+## Further Reading
+
+The following vignettes cover specific topics in greater depth:
+
+- **[`vignette("logit-nested-logit")`](https://hchulkim.github.io/rblp/articles/logit-nested-logit.md)**:
+  Derivation and estimation of the logit and nested logit demand models,
+  including the logit inversion, price endogeneity, and the role of
+  instruments.
+- **[`vignette("random-coefficients")`](https://hchulkim.github.io/rblp/articles/random-coefficients.md)**:
+  The random coefficients (mixed) logit model, integration methods, the
+  sigma/pi parameterization, and convergence diagnostics.
+- **[`vignette("post-estimation-mergers")`](https://hchulkim.github.io/rblp/articles/post-estimation-mergers.md)**:
+  Post-estimation analysis including elasticities, diversion ratios,
+  consumer surplus, markups, merger simulation, and specification tests.
+- **[`vignette("mixtape-exercises")`](https://hchulkim.github.io/rblp/articles/mixtape-exercises.md)**:
+  Exercises inspired by the Mixtape Sessions demand estimation course,
+  progressing from OLS logit through IV logit to random coefficients
+  logit.
+- **[`vignette("simulation-monte-carlo")`](https://hchulkim.github.io/rblp/articles/simulation-monte-carlo.md)**:
+  Using the BLPSimulation class for roundtrip validation, instrument
+  construction, and Monte Carlo study design.
+
 ## References
 
 - Berry, S., Levinsohn, J., & Pakes, A. (1995). Automobile Prices in

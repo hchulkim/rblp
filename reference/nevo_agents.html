@@ -7,7 +7,7 @@ Contains integration nodes, weights, and demographic variables for
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rblp</a>
 
@@ -22,7 +22,19 @@ Contains integration nodes, weights, and demographic variables for
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="../articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -66,7 +78,16 @@ Contains integration nodes, weights, and demographic variables for
 <dd><p>Integration weights (sum to 1 within each market)</p></dd>
 
 <dt>nodes0</dt>
-<dd><p>Integration nodes (4 total: nodes0-nodes3)</p></dd>
+<dd><p>Integration node dimension 0</p></dd>
+
+<dt>nodes1</dt>
+<dd><p>Integration node dimension 1</p></dd>
+
+<dt>nodes2</dt>
+<dd><p>Integration node dimension 2</p></dd>
+
+<dt>nodes3</dt>
+<dd><p>Integration node dimension 3</p></dd>
 
 <dt>income</dt>
 <dd><p>Log income</p></dd>
@@ -98,7 +119,7 @@ Management Strategy</em>, 9(4), 513-548.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">

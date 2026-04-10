@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rblp</a>
 
@@ -18,7 +18,19 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="../articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -35,9 +47,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="problem-setup">Problem Setup<a class="anchor" aria-label="anchor" href="#problem-setup"></a></h2>
 
-
+      <div class="section-desc"><p>Define model formulations and create estimation problems.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -46,10 +58,47 @@
 
       <dl><dt>
 
+          <code><a href="blp_formulation.html">blp_formulation()</a></code>
+
+        </dt>
+        <dd>Create a BLP formulation</dd>
+
+        <dt>
+
           <code><a href="BLPFormulation.html">BLPFormulation</a></code>
 
         </dt>
         <dd>BLP Model Formulation</dd>
+
+        <dt>
+
+          <code><a href="blp_problem.html">blp_problem()</a></code>
+
+        </dt>
+        <dd>Create a BLP Problem</dd>
+
+        <dt>
+
+          <code><a href="BLPProblem.html">BLPProblem</a></code>
+
+        </dt>
+        <dd>BLP Problem</dd>
+      </dl></div><div class="section level2">
+      <h2 id="estimation-configuration">Estimation Configuration<a class="anchor" aria-label="anchor" href="#estimation-configuration"></a></h2>
+
+      <div class="section-desc"><p>Configure integration, iteration, and optimization for estimation.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="blp_integration.html">blp_integration()</a></code>
+
+        </dt>
+        <dd>Create integration configuration</dd>
 
         <dt>
 
@@ -60,6 +109,13 @@
 
         <dt>
 
+          <code><a href="blp_iteration.html">blp_iteration()</a></code>
+
+        </dt>
+        <dd>Create iteration configuration</dd>
+
+        <dt>
+
           <code><a href="BLPIteration.html">BLPIteration</a></code>
 
         </dt>
@@ -67,24 +123,49 @@
 
         <dt>
 
+          <code><a href="blp_optimization.html">blp_optimization()</a></code>
+
+        </dt>
+        <dd>Create optimization configuration</dd>
+
+        <dt>
+
           <code><a href="BLPOptimization.html">BLPOptimization</a></code>
 
         </dt>
         <dd>Optimization Configuration</dd>
+      </dl></div><div class="section level2">
+      <h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Post-estimation analysis: elasticities, surplus, mergers, and more.</p></div>
 
-          <code><a href="BLPProblem.html">BLPProblem</a></code>
+      <dl></dl></div><div class="section level2">
 
-        </dt>
-        <dd>BLP Problem</dd>
 
-        <dt>
+
+
+      <dl><dt>
 
           <code><a href="BLPResults.html">BLPResults</a></code>
 
         </dt>
         <dd>BLP Estimation Results</dd>
+      </dl></div><div class="section level2">
+      <h2 id="simulation">Simulation<a class="anchor" aria-label="anchor" href="#simulation"></a></h2>
+
+      <div class="section-desc"><p>Simulate equilibrium data for testing and Monte Carlo studies.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="blp_simulation.html">blp_simulation()</a></code>
+
+        </dt>
+        <dd>Create a BLP Simulation</dd>
 
         <dt>
 
@@ -102,138 +183,21 @@
 
         <dt>
 
-          <code><a href="MicroDataset.html">MicroDataset</a></code>
-
-        </dt>
-        <dd>Micro Dataset</dd>
-
-        <dt>
-
-          <code><a href="MicroMoment.html">MicroMoment</a></code>
-
-        </dt>
-        <dd>Micro Moment</dd>
-
-        <dt>
-
-          <code><a href="MicroPart.html">MicroPart</a></code>
-
-        </dt>
-        <dd>Micro Part</dd>
-
-        <dt>
-
-          <code><a href="blp_agents.html">blp_agents</a></code>
-
-        </dt>
-        <dd>BLP (1995) Automobile Agent Data</dd>
-
-        <dt>
-
-          <code><a href="blp_formulation.html">blp_formulation()</a></code>
-
-        </dt>
-        <dd>Create a BLP formulation</dd>
-
-        <dt>
-
-          <code><a href="blp_integration.html">blp_integration()</a></code>
-
-        </dt>
-        <dd>Create integration configuration</dd>
-
-        <dt>
-
-          <code><a href="blp_iteration.html">blp_iteration()</a></code>
-
-        </dt>
-        <dd>Create iteration configuration</dd>
-
-        <dt>
-
-          <code><a href="blp_optimization.html">blp_optimization()</a></code>
-
-        </dt>
-        <dd>Create optimization configuration</dd>
-
-        <dt>
-
-          <code><a href="blp_problem.html">blp_problem()</a></code>
-
-        </dt>
-        <dd>Create a BLP Problem</dd>
-
-        <dt>
-
-          <code><a href="blp_products.html">blp_products</a></code>
-
-        </dt>
-        <dd>BLP (1995) Automobile Product Data</dd>
-
-        <dt>
-
-          <code><a href="blp_simulation.html">blp_simulation()</a></code>
-
-        </dt>
-        <dd>Create a BLP Simulation</dd>
-
-        <dt>
-
-          <code><a href="build_blp_instruments.html">build_blp_instruments()</a></code>
-
-        </dt>
-        <dd>Build BLP Instruments (Sums of Characteristics)</dd>
-
-        <dt>
-
-          <code><a href="build_custom_ownership.html">build_custom_ownership()</a></code>
-
-        </dt>
-        <dd>Build Custom Ownership Matrix</dd>
-
-        <dt>
-
-          <code><a href="build_differentiation_instruments.html">build_differentiation_instruments()</a></code>
-
-        </dt>
-        <dd>Build Differentiation Instruments (Gandhi &amp; Houde 2020)</dd>
-
-        <dt>
-
           <code><a href="build_id_data.html">build_id_data()</a></code>
 
         </dt>
         <dd>Build Balanced ID Data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="micro-moments">Micro Moments<a class="anchor" aria-label="anchor" href="#micro-moments"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Match micro-level data moments to model predictions.</p></div>
 
-          <code><a href="load_blp_agents.html">load_blp_agents()</a></code>
+      <dl></dl></div><div class="section level2">
 
-        </dt>
-        <dd>Load BLP (1995) automobile agent data</dd>
 
-        <dt>
 
-          <code><a href="load_blp_products.html">load_blp_products()</a></code>
 
-        </dt>
-        <dd>Load BLP (1995) automobile product data</dd>
-
-        <dt>
-
-          <code><a href="load_nevo_agents.html">load_nevo_agents()</a></code>
-
-        </dt>
-        <dd>Load Nevo (2000) cereal agent data</dd>
-
-        <dt>
-
-          <code><a href="load_nevo_products.html">load_nevo_products()</a></code>
-
-        </dt>
-        <dd>Load Nevo (2000) cereal product data</dd>
-
-        <dt>
+      <dl><dt>
 
           <code><a href="micro_dataset.html">micro_dataset()</a></code>
 
@@ -242,10 +206,10 @@
 
         <dt>
 
-          <code><a href="micro_moment.html">micro_moment()</a></code>
+          <code><a href="MicroDataset.html">MicroDataset</a></code>
 
         </dt>
-        <dd>Create a Micro Moment</dd>
+        <dd>Micro Dataset</dd>
 
         <dt>
 
@@ -256,10 +220,91 @@
 
         <dt>
 
-          <code><a href="nevo_agents.html">nevo_agents</a></code>
+          <code><a href="MicroPart.html">MicroPart</a></code>
 
         </dt>
-        <dd>Nevo (2000) Cereal Agent Data</dd>
+        <dd>Micro Part</dd>
+
+        <dt>
+
+          <code><a href="micro_moment.html">micro_moment()</a></code>
+
+        </dt>
+        <dd>Create a Micro Moment</dd>
+
+        <dt>
+
+          <code><a href="MicroMoment.html">MicroMoment</a></code>
+
+        </dt>
+        <dd>Micro Moment</dd>
+      </dl></div><div class="section level2">
+      <h2 id="instruments-and-data-construction">Instruments and Data Construction<a class="anchor" aria-label="anchor" href="#instruments-and-data-construction"></a></h2>
+
+      <div class="section-desc"><p>Construct instruments and generate panel structures.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="build_blp_instruments.html">build_blp_instruments()</a></code>
+
+        </dt>
+        <dd>Build BLP Instruments (Sums of Characteristics)</dd>
+
+        <dt>
+
+          <code><a href="build_differentiation_instruments.html">build_differentiation_instruments()</a></code>
+
+        </dt>
+        <dd>Build Differentiation Instruments (Gandhi &amp; Houde 2020)</dd>
+
+        <dt>
+
+          <code><a href="build_custom_ownership.html">build_custom_ownership()</a></code>
+
+        </dt>
+        <dd>Build Custom Ownership Matrix</dd>
+      </dl></div><div class="section level2">
+      <h2 id="bundled-datasets">Bundled Datasets<a class="anchor" aria-label="anchor" href="#bundled-datasets"></a></h2>
+
+      <div class="section-desc"><p>Bundled empirical datasets for replicating published results. The Nevo (2000) cereal data and BLP (1995) automobile data are the standard benchmarks in the differentiated products literature.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="load_nevo_products.html">load_nevo_products()</a></code>
+
+        </dt>
+        <dd>Load Nevo (2000) cereal product data</dd>
+
+        <dt>
+
+          <code><a href="load_nevo_agents.html">load_nevo_agents()</a></code>
+
+        </dt>
+        <dd>Load Nevo (2000) cereal agent data</dd>
+
+        <dt>
+
+          <code><a href="load_blp_products.html">load_blp_products()</a></code>
+
+        </dt>
+        <dd>Load BLP (1995) automobile product data</dd>
+
+        <dt>
+
+          <code><a href="load_blp_agents.html">load_blp_agents()</a></code>
+
+        </dt>
+        <dd>Load BLP (1995) automobile agent data</dd>
 
         <dt>
 
@@ -270,23 +315,63 @@
 
         <dt>
 
-          <code><a href="rblp-package.html">rblp-package</a></code> <code><a href="rblp-package.html">rblp</a></code>
+          <code><a href="nevo_agents.html">nevo_agents</a></code>
 
         </dt>
-        <dd>rblp: BLP Demand Estimation for Differentiated Products</dd>
+        <dd>Nevo (2000) Cereal Agent Data</dd>
 
         <dt>
+
+          <code><a href="blp_products.html">blp_products</a></code>
+
+        </dt>
+        <dd>BLP (1995) Automobile Product Data</dd>
+
+        <dt>
+
+          <code><a href="blp_agents.html">blp_agents</a></code>
+
+        </dt>
+        <dd>BLP (1995) Automobile Agent Data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="options">Options<a class="anchor" aria-label="anchor" href="#options"></a></h2>
+
+      <div class="section-desc"><p>Package-wide configuration options.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="rblp_options.html">rblp_options()</a></code>
 
         </dt>
         <dd>Get or Set rblp Package Options</dd>
+      </dl></div><div class="section level2">
+      <h2 id="package">Package<a class="anchor" aria-label="anchor" href="#package"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="rblp-package.html">rblp-package</a></code> <code><a href="rblp-package.html">rblp</a></code>
+
+        </dt>
+        <dd>rblp: BLP Demand Estimation for Differentiated Products</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">

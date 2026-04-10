@@ -3,7 +3,12 @@
 <url><loc>https://hchulkim.github.io/rblp/CLAUDE.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/LICENSE-text.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/articles/index.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/logit-nested-logit.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/mixtape-exercises.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/post-estimation-mergers.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/random-coefficients.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/articles/rblp-tutorial.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/simulation-monte-carlo.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/authors.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/index.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/BLPEconomy.html</loc></url>
@@ -50,7 +55,6 @@
 <url><loc>https://hchulkim.github.io/rblp/reference/format_number.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/format_seconds.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/gauss_hermite.html</loc></url>
-<url><loc>https://hchulkim.github.io/rblp/reference/grapes-or-or-grapes.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/groups_expand.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/groups_mean.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/groups_sum.html</loc></url>

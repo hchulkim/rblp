@@ -5,7 +5,7 @@ Safe logarithm with underflow protection
 ## Usage
 
 ``` r
-log_safe(x, min_val = 9.99999999999999e-301)
+log_safe(x, min_val = .Machine$double.xmin)
 ```
 
 ## Arguments

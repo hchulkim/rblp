@@ -67,9 +67,3 @@ Useful links:
 ## Author
 
 **Maintainer**: Hyoungchul Kim <hchulkim@virginia.edu>
-
-Authors:
-
-- Jeff Gortmaker (Author of original pyblp Python package)
-
-- Chris Conlon (Co-author of pyblp methodology)

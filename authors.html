@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="index.html">rblp</a>
 
@@ -18,7 +18,19 @@
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
@@ -41,30 +53,38 @@
           <p><strong>Hyoungchul Kim</strong>. Author, maintainer.
           </p>
         </li>
-        <li>
-          <p><strong>Jeff Gortmaker</strong>. Author.
-          <br><small>Author of original pyblp Python package</small></p>
-        </li>
-        <li>
-          <p><strong>Chris Conlon</strong>. Author.
-          <br><small>Co-author of pyblp methodology</small></p>
-        </li>
       </ul></div>
 
     <div class="section level2">
       <h2 id="citation">Citation</h2>
-      <p><small class="dont-index">Source: <a href="https://github.com/hchulkim/rblp/blob/main/DESCRIPTION" class="external-link"><code>DESCRIPTION</code></a></small></p>
+      <p><small class="dont-index">Source: <a href="https://github.com/hchulkim/rblp/blob/main/inst/CITATION" class="external-link"><code>inst/CITATION</code></a></small></p>
 
-      <p>Kim H, Gortmaker J, Conlon C (2026).
+      <p>Kim H (2026).
 <em>rblp: BLP Demand Estimation for Differentiated Products</em>.
 R package version 0.1.0, <a href="https://github.com/hchulkim/rblp" class="external-link">https://github.com/hchulkim/rblp</a>.
 </p>
       <pre>@Manual{,
   title = {rblp: BLP Demand Estimation for Differentiated Products},
-  author = {Hyoungchul Kim and Jeff Gortmaker and Chris Conlon},
+  author = {Hyoungchul Kim},
   year = {2026},
   note = {R package version 0.1.0},
   url = {https://github.com/hchulkim/rblp},
+}</pre>
+      <p>Conlon C, Gortmaker J (2020).
+“Best Practices for Differentiated Products Demand Estimation with pyblp.”
+<em>RAND Journal of Economics</em>, <b>51</b>(4), 1108–1161.
+<a href="https://doi.org/10.1111/1756-2171.12352" class="external-link">doi:10.1111/1756-2171.12352</a>, rblp is translated from the pyblp Python package; please cite both rblp and pyblp.
+</p>
+      <pre>@Article{,
+  title = {Best Practices for Differentiated Products Demand Estimation with pyblp},
+  author = {Christopher Conlon and Jeff Gortmaker},
+  journal = {RAND Journal of Economics},
+  year = {2020},
+  volume = {51},
+  number = {4},
+  pages = {1108--1161},
+  doi = {10.1111/1756-2171.12352},
+  note = {rblp is translated from the pyblp Python package; please cite both rblp and pyblp},
 }</pre>
     </div>
 
@@ -73,7 +93,7 @@ R package version 0.1.0, <a href="https://github.com/hchulkim/rblp" class="exter
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">

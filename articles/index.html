@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rblp</a>
 
@@ -18,7 +18,19 @@
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
+    <li><a class="dropdown-item" href="../articles/random-coefficients.html">Random Coefficients Logit</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Post-Estimation</h6></li>
+    <li><a class="dropdown-item" href="../articles/post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
+    <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
+    <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -35,17 +47,43 @@
     </div>
 
     <div class="section ">
-      <h3>All vignettes</h3>
-      <div class="section-desc"></div>
+      <h3>Getting Started</h3>
+      <div class="section-desc"><p>Start here for a quick overview of the rblp package, covering logit estimation, random coefficients, simulation, and merger analysis.</p></div>
 
       <dl><dt><a href="rblp-tutorial.html">Getting Started with rblp</a></dt>
         <dd>
       </dd></dl></div>
-  </main></div>
+    <div class="section ">
+      <h3>Model Estimation</h3>
+      <div class="section-desc"><p>Detailed guides on estimating demand models, from the plain logit to the full random coefficients BLP specification with demographics.</p></div>
+
+      <dl><dt><a href="logit-nested-logit.html">Logit and Nested Logit Models</a></dt>
+        <dd>
+        </dd><dt><a href="random-coefficients.html">Random Coefficients Logit</a></dt>
+        <dd>
+      </dd></dl></div>
+    <div class="section ">
+      <h3>Post-Estimation &amp; Policy Analysis</h3>
+      <div class="section-desc"><p>Use estimated demand parameters to compute elasticities, consumer surplus, markups, diversion ratios, and simulate the effects of mergers.</p></div>
+
+      <dl><dt><a href="post-estimation-mergers.html">Post-Estimation and Merger Simulation</a></dt>
+        <dd>
+      </dd></dl></div>
+    <div class="section ">
+      <h3>Tutorials &amp; Exercises</h3>
+      <div class="section-desc"><p>Hands-on tutorials for learning BLP estimation, including Mixtape Sessions exercises and Monte Carlo simulation studies.</p></div>
+
+      <dl><dt><a href="mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></dt>
+        <dd>
+        </dd><dt><a href="simulation-monte-carlo.html">Simulation and Monte Carlo</a></dt>
+        <dd>
+      </dd></dl></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Hyoungchul Kim, Jeff Gortmaker, Chris Conlon.</p>
+  <p>Developed by Hyoungchul Kim.</p>
 </div>
 
 <div class="pkgdown-footer-right">
