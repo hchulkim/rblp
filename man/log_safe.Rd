@@ -4,7 +4,7 @@
 \alias{log_safe}
 \title{Safe logarithm with underflow protection}
 \usage{
-log_safe(x, min_val = 9.99999999999999e-301)
+log_safe(x, min_val = .Machine$double.xmin)
 }
 \arguments{
 \item{x}{Numeric vector}

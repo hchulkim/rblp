@@ -11,7 +11,10 @@ A data frame with 1880 rows and the following columns:
 \item{city_ids}{City identifier}
 \item{quarter}{Quarter}
 \item{weights}{Integration weights (sum to 1 within each market)}
-\item{nodes0}{Integration nodes (4 total: nodes0-nodes3)}
+\item{nodes0}{Integration node dimension 0}
+\item{nodes1}{Integration node dimension 1}
+\item{nodes2}{Integration node dimension 2}
+\item{nodes3}{Integration node dimension 3}
 \item{income}{Log income}
 \item{income_squared}{Squared log income}
 \item{age}{Age (transformed)}

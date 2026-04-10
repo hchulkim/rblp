@@ -9,7 +9,11 @@ A data frame with 4000 rows and the following columns:
 \describe{
 \item{market_ids}{Market year}
 \item{weights}{Integration weights}
-\item{nodes0}{Integration nodes (5 total: nodes0-nodes4)}
+\item{nodes0}{Integration node dimension 0}
+\item{nodes1}{Integration node dimension 1}
+\item{nodes2}{Integration node dimension 2}
+\item{nodes3}{Integration node dimension 3}
+\item{nodes4}{Integration node dimension 4}
 \item{income}{Simulated income}
 }
 }

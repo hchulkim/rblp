@@ -125,7 +125,7 @@ safe_exp <- function(x) {
 # product with very low utility), the log would produce -Inf and corrupt
 # the iteration. The floor of 1e-300 is far below any meaningful share but
 # keeps the computation finite.
-log_safe <- function(x, min_val = 1e-300) {
+log_safe <- function(x, min_val = .Machine$double.xmin) {
   log(pmax(x, min_val))
 }
 

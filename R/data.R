@@ -21,7 +21,26 @@
 #'   \item{prices}{Product price (dollars per serving)}
 #'   \item{sugar}{Sugar content (grams per serving)}
 #'   \item{mushy}{Mushiness indicator (0/1)}
-#'   \item{demand_instruments0}{Excluded demand-side instrument (20 total: 0-19)}
+#'   \item{demand_instruments0}{Excluded demand-side instrument 0}
+#'   \item{demand_instruments1}{Excluded demand-side instrument 1}
+#'   \item{demand_instruments2}{Excluded demand-side instrument 2}
+#'   \item{demand_instruments3}{Excluded demand-side instrument 3}
+#'   \item{demand_instruments4}{Excluded demand-side instrument 4}
+#'   \item{demand_instruments5}{Excluded demand-side instrument 5}
+#'   \item{demand_instruments6}{Excluded demand-side instrument 6}
+#'   \item{demand_instruments7}{Excluded demand-side instrument 7}
+#'   \item{demand_instruments8}{Excluded demand-side instrument 8}
+#'   \item{demand_instruments9}{Excluded demand-side instrument 9}
+#'   \item{demand_instruments10}{Excluded demand-side instrument 10}
+#'   \item{demand_instruments11}{Excluded demand-side instrument 11}
+#'   \item{demand_instruments12}{Excluded demand-side instrument 12}
+#'   \item{demand_instruments13}{Excluded demand-side instrument 13}
+#'   \item{demand_instruments14}{Excluded demand-side instrument 14}
+#'   \item{demand_instruments15}{Excluded demand-side instrument 15}
+#'   \item{demand_instruments16}{Excluded demand-side instrument 16}
+#'   \item{demand_instruments17}{Excluded demand-side instrument 17}
+#'   \item{demand_instruments18}{Excluded demand-side instrument 18}
+#'   \item{demand_instruments19}{Excluded demand-side instrument 19}
 #' }
 #'
 #' @references
@@ -47,7 +66,10 @@
 #'   \item{city_ids}{City identifier}
 #'   \item{quarter}{Quarter}
 #'   \item{weights}{Integration weights (sum to 1 within each market)}
-#'   \item{nodes0}{Integration nodes (4 total: nodes0-nodes3)}
+#'   \item{nodes0}{Integration node dimension 0}
+#'   \item{nodes1}{Integration node dimension 1}
+#'   \item{nodes2}{Integration node dimension 2}
+#'   \item{nodes3}{Integration node dimension 3}
 #'   \item{income}{Log income}
 #'   \item{income_squared}{Squared log income}
 #'   \item{age}{Age (transformed)}
@@ -83,8 +105,26 @@
 #'   \item{mpg}{Miles per gallon}
 #'   \item{space}{Interior space (length x width)}
 #'   \item{trend}{Time trend}
-#'   \item{demand_instruments0}{Excluded demand-side instruments (8 total: 0-7)}
-#'   \item{supply_instruments0}{Excluded supply-side instruments (12 total: 0-11)}
+#'   \item{demand_instruments0}{Excluded demand-side instrument 0}
+#'   \item{demand_instruments1}{Excluded demand-side instrument 1}
+#'   \item{demand_instruments2}{Excluded demand-side instrument 2}
+#'   \item{demand_instruments3}{Excluded demand-side instrument 3}
+#'   \item{demand_instruments4}{Excluded demand-side instrument 4}
+#'   \item{demand_instruments5}{Excluded demand-side instrument 5}
+#'   \item{demand_instruments6}{Excluded demand-side instrument 6}
+#'   \item{demand_instruments7}{Excluded demand-side instrument 7}
+#'   \item{supply_instruments0}{Excluded supply-side instrument 0}
+#'   \item{supply_instruments1}{Excluded supply-side instrument 1}
+#'   \item{supply_instruments2}{Excluded supply-side instrument 2}
+#'   \item{supply_instruments3}{Excluded supply-side instrument 3}
+#'   \item{supply_instruments4}{Excluded supply-side instrument 4}
+#'   \item{supply_instruments5}{Excluded supply-side instrument 5}
+#'   \item{supply_instruments6}{Excluded supply-side instrument 6}
+#'   \item{supply_instruments7}{Excluded supply-side instrument 7}
+#'   \item{supply_instruments8}{Excluded supply-side instrument 8}
+#'   \item{supply_instruments9}{Excluded supply-side instrument 9}
+#'   \item{supply_instruments10}{Excluded supply-side instrument 10}
+#'   \item{supply_instruments11}{Excluded supply-side instrument 11}
 #' }
 #'
 #' @references
@@ -103,7 +143,11 @@
 #' \describe{
 #'   \item{market_ids}{Market year}
 #'   \item{weights}{Integration weights}
-#'   \item{nodes0}{Integration nodes (5 total: nodes0-nodes4)}
+#'   \item{nodes0}{Integration node dimension 0}
+#'   \item{nodes1}{Integration node dimension 1}
+#'   \item{nodes2}{Integration node dimension 2}
+#'   \item{nodes3}{Integration node dimension 3}
+#'   \item{nodes4}{Integration node dimension 4}
 #'   \item{income}{Simulated income}
 #' }
 #'

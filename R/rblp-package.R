@@ -57,6 +57,5 @@
 #' @importFrom utils head tail
 "_PACKAGE"
 
-#' Null-coalescing operator
-#' @keywords internal
+# Null-coalescing operator (internal utility, no roxygen to avoid Rd name issues)
 `%||%` <- function(x, y) if (is.null(x)) y else x
