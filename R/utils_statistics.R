@@ -39,7 +39,7 @@ iv_estimate <- function(X, Z, W, y, jacobian = NULL) {
 
 #' Compute GMM Weighting Matrix
 #' @param S Moment covariance matrix
-#' @return Weighting matrix W = S^{-1}, symmetrized
+#' @return Weighting matrix W = inverse of S, symmetrized
 #' @keywords internal
 compute_gmm_weights <- function(S) {
   W <- approximately_invert(S)$inverse

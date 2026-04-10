@@ -9,7 +9,7 @@ log_safe(x, min_val = 9.99999999999999e-301)
 \arguments{
 \item{x}{Numeric vector}
 
-\item{min_val}{Minimum value to clamp to (default 1e-300)}
+\item{min_val}{Minimum value to clamp to}
 }
 \value{
 log(pmax(x, min_val))

@@ -10,7 +10,7 @@ compute_gmm_weights(S)
 \item{S}{Moment covariance matrix}
 }
 \value{
-Weighting matrix W = S^{-1}, symmetrized
+Weighting matrix W = inverse of S, symmetrized
 }
 \description{
 Compute GMM Weighting Matrix

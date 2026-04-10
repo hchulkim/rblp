@@ -89,7 +89,7 @@ safe_exp <- function(x) {
 
 #' Safe logarithm with underflow protection
 #' @param x Numeric vector
-#' @param min_val Minimum value to clamp to (default 1e-300)
+#' @param min_val Minimum value to clamp to
 #' @return log(pmax(x, min_val))
 #' @keywords internal
 log_safe <- function(x, min_val = 1e-300) {

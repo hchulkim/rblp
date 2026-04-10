@@ -96,7 +96,7 @@ elimination_matrix <- function(n) {
 
 #' Commutation matrix
 #'
-#' Returns K_{m,n} such that K %*% vec(A) = vec(t(A)) for m x n matrix A.
+#' Returns K such that K \%*\% vec(A) = vec(t(A)) for m x n matrix A.
 #' @param m Number of rows
 #' @param n Number of columns (default = m)
 #' @return Commutation matrix (m*n x m*n)

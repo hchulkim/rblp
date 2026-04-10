@@ -15,6 +15,6 @@ commutation_matrix(m, n = m)
 Commutation matrix (m\emph{n x m}n)
 }
 \description{
-Returns K_{m,n} such that K \%*\% vec(A) = vec(t(A)) for m x n matrix A.
+Returns K such that K \\%*\\% vec(A) = vec(t(A)) for m x n matrix A.
 }
 \keyword{internal}

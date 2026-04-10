@@ -14,6 +14,7 @@ Configuration for designing model matrices from R formulas.
 \item \href{#method-BLPFormulation-get_names}{\code{BLPFormulation$get_names()}}
 \item \href{#method-BLPFormulation-has_prices}{\code{BLPFormulation$has_prices()}}
 \item \href{#method-BLPFormulation-has_shares}{\code{BLPFormulation$has_shares()}}
+\item \href{#method-BLPFormulation-get_absorb}{\code{BLPFormulation$get_absorb()}}
 \item \href{#method-BLPFormulation-print}{\code{BLPFormulation$print()}}
 \item \href{#method-BLPFormulation-clone}{\code{BLPFormulation$clone()}}
 }
@@ -87,6 +88,16 @@ Check if prices are in the formulation
 Check if shares are in the formulation
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BLPFormulation$has_shares()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPFormulation-get_absorb"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPFormulation-get_absorb}{}}}
+\subsection{Method \code{get_absorb()}}{
+Get absorb formula (if any)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPFormulation$get_absorb()}\if{html}{\out{</div>}}
 }
 
 }

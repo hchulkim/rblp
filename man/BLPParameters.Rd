@@ -15,6 +15,8 @@ Manages BLP model parameter compression, expansion, bounds, and labels.
 \item \href{#method-BLPParameters-expand}{\code{BLPParameters$expand()}}
 \item \href{#method-BLPParameters-get_bounds}{\code{BLPParameters$get_bounds()}}
 \item \href{#method-BLPParameters-get_labels}{\code{BLPParameters$get_labels()}}
+\item \href{#method-BLPParameters-get_sigma_free}{\code{BLPParameters$get_sigma_free()}}
+\item \href{#method-BLPParameters-get_pi_free}{\code{BLPParameters$get_pi_free()}}
 \item \href{#method-BLPParameters-n_free}{\code{BLPParameters$n_free()}}
 \item \href{#method-BLPParameters-print}{\code{BLPParameters$print()}}
 \item \href{#method-BLPParameters-clone}{\code{BLPParameters$clone()}}
@@ -80,6 +82,24 @@ Manages BLP model parameter compression, expansion, bounds, and labels.
 \subsection{Method \code{get_labels()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BLPParameters$get_labels()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPParameters-get_sigma_free"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPParameters-get_sigma_free}{}}}
+\subsection{Method \code{get_sigma_free()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPParameters$get_sigma_free()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPParameters-get_pi_free"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPParameters-get_pi_free}{}}}
+\subsection{Method \code{get_pi_free()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPParameters$get_pi_free()}\if{html}{\out{</div>}}
 }
 
 }
