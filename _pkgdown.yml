@@ -1,0 +1,7 @@
+url: https://hchulkim.github.io/rblp
+
+template:
+  bootstrap: 5
+
+development:
+  mode: auto
