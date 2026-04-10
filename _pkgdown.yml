@@ -2,6 +2,13 @@ url: https://hchulkim.github.io/rblp
 
 template:
   bootstrap: 5
+  bootswatch: cosmo
+
+home:
+  title: "rblp: BLP Demand Estimation in R"
+  description: >
+    Estimate, simulate, and analyze demand for differentiated products
+    using BLP random coefficients logit models. Translated from pyblp.
 
 development:
   mode: auto
@@ -24,11 +31,11 @@ navbar:
         - text: "Random Coefficients Logit"
           href: articles/random-coefficients.html
         - text: "-------"
-        - text: "Analysis"
+        - text: "Post-Estimation"
         - text: "Post-Estimation and Merger Simulation"
           href: articles/post-estimation-mergers.html
         - text: "-------"
-        - text: "Tutorials"
+        - text: "Tutorials & Exercises"
         - text: "Mixtape Demand Estimation Exercises"
           href: articles/mixtape-exercises.html
         - text: "Simulation and Monte Carlo"
@@ -36,19 +43,31 @@ navbar:
 
 articles:
   - title: "Getting Started"
+    desc: >
+      Start here for a quick overview of the rblp package, covering
+      logit estimation, random coefficients, simulation, and merger analysis.
     navbar: ~
     contents:
       - rblp-tutorial
   - title: "Model Estimation"
+    desc: >
+      Detailed guides on estimating demand models, from the plain logit
+      to the full random coefficients BLP specification with demographics.
     navbar: ~
     contents:
       - logit-nested-logit
       - random-coefficients
-  - title: "Analysis"
+  - title: "Post-Estimation & Policy Analysis"
+    desc: >
+      Use estimated demand parameters to compute elasticities, consumer surplus,
+      markups, diversion ratios, and simulate the effects of mergers.
     navbar: ~
     contents:
       - post-estimation-mergers
-  - title: "Tutorials"
+  - title: "Tutorials & Exercises"
+    desc: >
+      Hands-on tutorials for learning BLP estimation, including Mixtape Sessions
+      exercises and Monte Carlo simulation studies.
     navbar: ~
     contents:
       - mixtape-exercises
@@ -96,18 +115,33 @@ reference:
       - micro_moment
       - MicroMoment
 
-  - title: "Instruments and Data"
-    desc: "Construct instruments and load bundled datasets."
+  - title: "Instruments and Data Construction"
+    desc: "Construct instruments and generate panel structures."
     contents:
       - build_blp_instruments
       - build_differentiation_instruments
       - build_custom_ownership
+
+  - title: "Bundled Datasets"
+    desc: >
+      Bundled empirical datasets for replicating published results.
+      The Nevo (2000) cereal data and BLP (1995) automobile data
+      are the standard benchmarks in the differentiated products literature.
+    contents:
       - load_nevo_products
       - load_nevo_agents
       - load_blp_products
       - load_blp_agents
+      - nevo_products
+      - nevo_agents
+      - blp_products
+      - blp_agents
 
   - title: "Options"
     desc: "Package-wide configuration options."
     contents:
       - rblp_options
+
+  - title: "Package"
+    contents:
+      - rblp-package

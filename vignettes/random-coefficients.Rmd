@@ -120,7 +120,9 @@ For most applications:
 
 The simplest RC logit has only unobserved heterogeneity (no demographics). This requires two formulations: one for the linear component ($X_1$) and one for the nonlinear component ($X_2$).
 
-```{r rc_no_demo, eval=FALSE}
+### Problem Setup
+
+```{r rc_problem_setup}
 library(rblp)
 products <- load_nevo_products()
 
@@ -137,6 +139,19 @@ rc_problem <- blp_problem(
   integration = blp_integration("product", size = 3)  # 3^4 = 81 points
 )
 
+cat(sprintf("K1 (linear params): %d\n", rc_problem$K1))
+cat(sprintf("K2 (random coefficients): %d\n", rc_problem$K2))
+cat(sprintf("Total integration nodes: %d (%d per market)\n",
+            rc_problem$I, rc_problem$I / rc_problem$T))
+cat(sprintf("Total observations: %d\n", rc_problem$N))
+cat(sprintf("Markets: %d\n", rc_problem$T))
+```
+
+The problem has `r rc_problem$K2` random coefficients (intercept, prices, sugar, mushy), so with `size = 3` Gauss-Hermite nodes per dimension, we get $3^4 = 81$ integration points per market.
+
+### Estimation
+
+```{r rc_no_demo, eval=FALSE}
 # Sigma starting values (4x4 diagonal)
 initial_sigma <- diag(c(0.5, 0.5, 0.5, 0.5))
 
@@ -159,16 +174,23 @@ print(rc_results)
 
 ## RC Logit with Demographics (Full Nevo Specification)
 
-The full Nevo (2000) specification includes observed demographics (income, age, child presence) interacting with product characteristics. This is the canonical BLP specification.
+The full Nevo (2000) specification includes observed demographics (income, age, child presence) interacting with product characteristics. This is the canonical BLP specification that matches the pyblp Nevo tutorial.
 
-```{r rc_demo, eval=FALSE}
-library(rblp)
-products <- load_nevo_products()
+### Problem Setup
+
+```{r rc_demo_setup}
 agents <- load_nevo_agents()
+
+cat("Agent data columns:\n")
+cat(paste(names(agents), collapse = ", "), "\n\n")
+cat(sprintf("Agents: %d (%d per market)\n", nrow(agents),
+            nrow(agents) / length(unique(agents$market_ids))))
 
 # Inspect the agent data
 head(agents[, c("market_ids", "weights", "income", "income_squared", "age", "child")])
+```
 
+```{r rc_demo_problem}
 # X1: linear demand with product fixed effects (absorb product dummies)
 # Only price is estimated; intercept, sugar, mushy are absorbed
 f1 <- blp_formulation(~ 0 + prices, absorb = ~ product_ids)
@@ -186,6 +208,13 @@ demo_problem <- blp_problem(
   agent_formulation = f_demo,
   agent_data = agents
 )
+
+cat(sprintf("K1 (linear params): %d (only prices, FE absorbed)\n", demo_problem$K1))
+cat(sprintf("K2 (random coefficients): %d\n", demo_problem$K2))
+cat(sprintf("D (demographics): %d\n", demo_problem$D))
+cat(sprintf("Agents per market (from data): %d\n", demo_problem$I))
+cat(sprintf("Sigma matrix: %d x %d\n", demo_problem$K2, demo_problem$K2))
+cat(sprintf("Pi matrix: %d x %d\n", demo_problem$K2, demo_problem$D))
 ```
 
 The sigma and pi matrices encode the parameter structure:
