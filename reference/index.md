@@ -100,6 +100,16 @@ benchmarks in the differentiated products literature.
   : BLP (1995) Automobile Product Data
 - [`blp_agents`](https://hchulkim.github.io/rblp/reference/blp_agents.md)
   : BLP (1995) Automobile Agent Data
+- [`load_mixtape_products()`](https://hchulkim.github.io/rblp/reference/load_mixtape_products.md)
+  : Load Mixtape Sessions cereal product data
+- [`load_mixtape_demographics()`](https://hchulkim.github.io/rblp/reference/load_mixtape_demographics.md)
+  : Load Mixtape Sessions cereal demographic data
+- [`prepare_mixtape_data()`](https://hchulkim.github.io/rblp/reference/prepare_mixtape_data.md)
+  : Prepare Mixtape product data for rblp estimation
+- [`mixtape_products`](https://hchulkim.github.io/rblp/reference/mixtape_products.md)
+  : Mixtape Sessions Cereal Product Data
+- [`mixtape_demographics`](https://hchulkim.github.io/rblp/reference/mixtape_demographics.md)
+  : Mixtape Sessions Cereal Demographic Data
 
 ## Options
 

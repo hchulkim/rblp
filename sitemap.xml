@@ -62,6 +62,8 @@
 <url><loc>https://hchulkim.github.io/rblp/reference/iv_estimate.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_blp_agents.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_blp_products.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/load_mixtape_demographics.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/load_mixtape_products.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_nevo_agents.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_nevo_products.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/log_safe.html</loc></url>
@@ -70,8 +72,11 @@
 <url><loc>https://hchulkim.github.io/rblp/reference/micro_dataset.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/micro_moment.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/micro_part.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/mixtape_demographics.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/mixtape_products.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/nevo_agents.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/nevo_products.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/prepare_mixtape_data.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/rblp-package.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/rblp_options.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/safe_exp.html</loc></url>
