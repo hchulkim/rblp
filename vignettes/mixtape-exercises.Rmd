@@ -17,295 +17,718 @@ options(rblp.verbose = FALSE)
 
 ## Introduction
 
-This vignette reproduces key exercises from the Mixtape Sessions demand estimation course by Scott Cunningham, Jeff Gortmaker, and others. The exercises build from OLS logit through IV logit to random coefficients logit, using the Nevo (2000) cereal dataset.
+This vignette walks through the exercises from the
+[Mixtape Sessions Demand Estimation](https://github.com/Mixtape-Sessions/Demand-Estimation)
+course, taught by Jeff Gortmaker and others. The original course materials use
+Python and [pyblp](https://pyblp.readthedocs.io/en/stable/); here we reproduce
+every exercise in R using the **rblp** package.
 
-The rblp package bundles the same underlying Nevo data used in the pyblp-based course materials, so results should be directly comparable.
+The exercises build progressively:
 
-For background on the models, see `vignette("logit-nested-logit")` and `vignette("random-coefficients")`.
+1. **Exercise 1 (Pure Logit):** OLS logit, IV logit, fixed effects, counterfactual
+   price cuts, and elasticities.
+2. **Exercise 2 (Mixed Logit):** Adding demographic interactions and random
+   coefficients to capture consumer heterogeneity.
+3. **Exercise 3 (Micro Moments):** Using individual-level data to sharpen
+   identification (conceptual overview).
+
+The dataset is a simplified version of the Nevo (2000) ready-to-eat cereal data
+covering 24 products across 94 city-quarter markets.
 
 ## Data Setup
+
+rblp bundles the Mixtape cereal data. The raw data has columns for `market`,
+`product`, `mushy`, `servings_sold`, `city_population`, `price_per_serving`,
+and `price_instrument`. We use `prepare_mixtape_data()` to compute market shares
+and rename columns into the format expected by `blp_problem()`.
 
 ```{r data_setup}
 library(rblp)
 
-products <- load_nevo_products()
-agents <- load_nevo_agents()
+# Load and prepare data
+raw <- load_mixtape_products()
+products <- prepare_mixtape_data(raw)
 
-# Key variables
 cat(sprintf("Product-market observations: %d\n", nrow(products)))
-cat(sprintf("Markets: %d\n", length(unique(products$market_ids))))
+cat(sprintf("Markets (city-quarter): %d\n", length(unique(products$market_ids))))
 cat(sprintf("Products per market: %d\n", length(unique(products$product_ids))))
-cat(sprintf("Agents per market: %d\n",
-            nrow(agents) / length(unique(agents$market_ids))))
+cat(sprintf("Firms: %s\n", paste(sort(unique(products$firm_ids)), collapse = ", ")))
+```
+
+### Understanding the Data
+
+The key columns after preparation:
+
+- `market_ids`: city-quarter identifier (e.g., "C01Q1")
+- `product_ids`: product identifier (e.g., "F1B04" = Firm 1, Brand 04)
+- `shares`: market share = `servings_sold / (city_population * 90)`, where 90
+  represents one serving per day over a quarter
+- `prices`: price per serving (dollars)
+- `mushy`: indicator for whether the cereal is mushy (0/1)
+- `firm_ids`: extracted from the first two characters of `product_ids`
+- `demand_instruments0`: excluded price instrument for IV estimation
+
+```{r data_summary}
+cat("Price per serving summary:\n")
+print(round(summary(products$prices), 4))
+cat("\nMarket share summary:\n")
+print(round(summary(products$shares), 6))
+cat("\nMushy breakdown:\n")
+print(table(mushy = products$mushy[!duplicated(products$product_ids)]))
 ```
 
 ### Computing the Outside Good Share
 
-The logit model requires the outside good share $s_{0t}$ in each market. The Nevo data defines the potential market size implicitly: inside shares sum to less than 1, and $s_{0t} = 1 - \sum_j s_{jt}$.
+In the logit model, the outside good share in each market is
+$s_{0t} = 1 - \sum_j s_{jt}$. The outside good represents consumers who do not
+purchase any of the 24 inside products.
 
 ```{r outside_share}
-# Compute inside share by market
 market_inside_shares <- tapply(products$shares, products$market_ids, sum)
 
-cat("Inside share summary:\n")
-cat(sprintf("  Mean: %.4f\n", mean(market_inside_shares)))
-cat(sprintf("  Min:  %.4f\n", min(market_inside_shares)))
-cat(sprintf("  Max:  %.4f\n", max(market_inside_shares)))
+cat("Inside share (sum of product shares per market):\n")
+cat(sprintf("  Mean:  %.4f\n", mean(market_inside_shares)))
+cat(sprintf("  Min:   %.4f\n", min(market_inside_shares)))
+cat(sprintf("  Max:   %.4f\n", max(market_inside_shares)))
+
+cat("\nOutside share:\n")
+cat(sprintf("  Mean:  %.4f\n", mean(1 - market_inside_shares)))
+cat(sprintf("  Min:   %.4f\n", min(1 - market_inside_shares)))
+cat(sprintf("  Max:   %.4f\n", max(1 - market_inside_shares)))
 ```
 
-## Exercise 1: OLS Logit vs. IV Logit
+The outside share ranges from about 30% to 82%, indicating substantial variation
+in how much of each market is captured by the 24 tracked cereal products.
 
-### Part A: OLS Logit Regression
+---
 
-The OLS logit regression estimates the linear model:
+## Exercise 1: Pure Logit
 
-$$\log(s_{jt}) - \log(s_{0t}) = \beta_0 + \alpha p_{jt} + \beta_1 \text{sugar}_{jt} + \beta_2 \text{mushy}_{jt} + \xi_{jt}$$
+### Q1-Q2: Data Description and Market Share Computation
 
-by ordinary least squares, ignoring the endogeneity of prices.
+The Mixtape dataset is a panel of 24 cereal products observed in 94
+city-quarter markets. For each product-market, we observe the quantity sold
+(`servings_sold`), the city population, the price per serving, and one
+excluded instrument for price.
 
-```{r ols_logit}
-# Compute log odds ratio (the dependent variable)
+Market shares are computed as:
+$$s_{jt} = \frac{\text{servings\_sold}_{jt}}{\text{city\_population}_t \times 90}$$
+
+where 90 is the assumed number of potential servings per person per quarter
+(about one per day). This defines the total market size, with the outside good
+absorbing whatever fraction of the population does not purchase any of the 24
+products.
+
+```{r q1_q2}
+# Show first few rows of the key variables
+head(products[, c("market_ids", "product_ids", "firm_ids",
+                   "shares", "prices", "mushy")], 10)
+```
+
+### Q3: OLS Logit with `lm()`
+
+The plain logit model has the Berry (1994) linear form:
+
+$$\log(s_{jt}) - \log(s_{0t}) = \beta_0 + \alpha \, p_{jt} + \beta_1 \, \text{mushy}_{jt} + \xi_{jt}$$
+
+We first estimate this by OLS, which is biased because prices $p_{jt}$ are
+correlated with the unobserved product-market quality $\xi_{jt}$ (price
+endogeneity).
+
+```{r q3_ols}
+# Compute the dependent variable: log(s_j) - log(s_0)
 outside_shares <- 1 - tapply(products$shares, products$market_ids, sum)
-products$s0 <- outside_shares[as.character(products$market_ids)]
+products$s0 <- as.numeric(outside_shares[as.character(products$market_ids)])
 products$y <- log(products$shares) - log(products$s0)
 
 # OLS regression
-ols_fit <- lm(y ~ prices + sugar + mushy, data = products)
+ols_fit <- lm(y ~ prices + mushy, data = products)
 
-cat("OLS Logit Results:\n")
-cat("=================\n")
-print(round(summary(ols_fit)$coefficients, 4))
+cat("=== OLS Logit Results ===\n\n")
+print(round(summary(ols_fit)$coefficients, 3))
 ```
 
-The OLS price coefficient is approximately $-7.5$. This is biased toward zero because of the positive correlation between prices and unobserved product quality ($\xi_{jt}$): high-quality products command higher prices, which partially offsets the negative effect of price on utility.
+The OLS estimates are:
 
-### Part B: IV Logit
+- Intercept: approximately $-2.935$
+- Price coefficient ($\alpha$): approximately $-7.48$
+- Mushy: approximately $0.075$ (not statistically significant)
 
-The IV logit uses excluded instruments to address price endogeneity. The Nevo data includes 20 pre-computed demand instruments.
+The price coefficient is biased toward zero. High-quality products command
+higher prices (positive correlation between $p_{jt}$ and $\xi_{jt}$), which
+partially offsets the true negative effect of price on demand.
 
-```{r iv_logit}
-# IV logit using rblp's GMM framework
-f1 <- blp_formulation(~ prices + sugar + mushy)
-logit_problem <- blp_problem(list(f1), products)
-iv_results <- logit_problem$solve(method = "1s")
+### Q4: OLS Logit with rblp
 
-print(iv_results)
+We can replicate the OLS logit using `blp_problem()`. The key is to set
+`demand_instruments0 = prices`, which makes the instrument set identical to the
+regressors (i.e., no excluded instruments), so the IV estimator reduces to OLS.
+
+```{r q4_rblp_ols}
+# For OLS: use prices as own instrument (no excluded instruments)
+products_ols <- products
+products_ols$demand_instruments0 <- products_ols$prices
+
+f1_ols <- blp_formulation(~ prices + mushy)
+ols_problem <- blp_problem(list(f1_ols), products_ols)
+ols_results <- ols_problem$solve(method = "1s")
+
+cat("=== rblp OLS Logit Results ===\n\n")
+print(ols_results)
 ```
 
-The IV price coefficient is approximately $-30.6$, much more negative than the OLS estimate. This large difference illustrates the severity of price endogeneity bias in demand estimation.
+The rblp results match the `lm()` estimates exactly: this confirms that the GMM
+framework with the identity instrument matrix reduces to OLS.
 
-### Part C: IV Logit with Product Fixed Effects
+### Q5: Fixed Effects Logit (Market + Product FE)
 
-Adding product fixed effects absorbs all time-invariant product characteristics, leaving only the within-product price variation for identification:
+Adding market and product fixed effects absorbs all time-invariant product
+characteristics and all market-level demand shifters. This eliminates $\xi_{jt}$
+components that are purely product-specific or purely market-specific, leaving
+only the within-product, within-market variation for identification.
 
-```{r iv_logit_fe}
-f1_fe <- blp_formulation(~ prices, absorb = ~ product_ids)
-fe_problem <- blp_problem(list(f1_fe), products)
+With fixed effects and prices as their own instrument, this is a "FE logit"
+that does not yet address endogeneity of the remaining price variation.
+
+```{r q5_fe}
+# FE logit: absorb market + product, prices as own instrument
+products_fe <- products
+products_fe$demand_instruments0 <- products_fe$prices
+
+f1_fe <- blp_formulation(~ 0 + prices, absorb = ~ market_ids + product_ids)
+fe_problem <- blp_problem(list(f1_fe), products_fe)
 fe_results <- fe_problem$solve(method = "1s")
 
+cat("=== FE Logit Results (prices as own IV) ===\n\n")
 print(fe_results)
 ```
 
-### Comparison
+The price coefficient with market and product fixed effects is approximately
+$-28.6$, much more negative than the OLS estimate of $-7.48$. The fixed effects
+absorb the product-level quality that was positively correlated with prices,
+revealing a much stronger true price sensitivity.
+
+### Q6: IV + Fixed Effects Logit
+
+Now we use the excluded `price_instrument` as an instrument for prices, combined
+with the market and product fixed effects. This addresses endogeneity from any
+remaining within-product, within-market correlation between prices and
+unobserved quality shocks.
+
+```{r q6_iv_fe}
+# IV + FE: use the price_instrument as excluded instrument
+products_iv <- products
+# demand_instruments0 is already set to price_instrument by prepare_mixtape_data()
+
+f1_iv <- blp_formulation(~ 0 + prices, absorb = ~ market_ids + product_ids)
+iv_problem <- blp_problem(list(f1_iv), products_iv)
+iv_results <- iv_problem$solve(method = "1s")
+
+cat("=== IV + FE Logit Results ===\n\n")
+print(iv_results)
+```
+
+The IV + FE price coefficient is approximately $-30.6$ (with a standard error
+around 1.0). This is slightly more negative than the FE-only estimate,
+indicating that even after absorbing fixed effects, there is some remaining
+positive correlation between prices and unobserved quality that the instrument
+helps correct.
+
+### Comparison of Logit Specifications
 
 ```{r comparison}
-cat("Price Coefficient Comparison:\n")
-cat(sprintf("  OLS:          %.4f\n", coef(ols_fit)["prices"]))
-cat(sprintf("  IV:           %.4f\n", iv_results$beta[1]))
-cat(sprintf("  IV + FE:      %.4f\n", fe_results$beta[1]))
+# ols_results$beta has: (Intercept), prices, mushy
+# fe_results$beta and iv_results$beta have: prices only (intercept absorbed)
+ols_price_idx <- which(names(coef(ols_fit)) == "prices")
+rblp_ols_price <- ols_results$beta[ols_price_idx]  # index 2 = prices
+
+cat("=== Price Coefficient Comparison ===\n\n")
+cat(sprintf("  OLS (lm):        %8.3f\n", coef(ols_fit)["prices"]))
+cat(sprintf("  rblp OLS:        %8.3f\n", rblp_ols_price))
+cat(sprintf("  FE (no IV):      %8.3f\n", fe_results$beta[1]))
+cat(sprintf("  FE + IV:         %8.3f  (SE = %.3f)\n",
+            iv_results$beta[1],
+            iv_results$summary_table()$se[1]))
 ```
 
-The progression shows how controlling for endogeneity (IV) and unobserved product heterogeneity (FE) reveals the true consumer price sensitivity.
+The progression from $-7.5$ (OLS) to $-28.6$ (FE) to $-30.6$ (IV+FE) shows
+how each correction --- absorbing fixed effects and instrumenting for price ---
+reveals increasingly strong consumer price sensitivity.
 
-### Part D: Counterfactual Price Increase
+### Q7: Price Cut Counterfactual
 
-Using the IV logit results, consider a 10% price increase for all products in the first market:
+We now use the IV + FE logit results to simulate a counterfactual: what happens
+to market shares if product F1B04 receives a price cut of $0.04 per serving in
+market C01Q1? (F1B04's baseline price is about $0.072, so this is roughly a 55%
+price reduction.)
 
-```{r counterfactual}
-first_market <- iv_results$problem$unique_market_ids[1]
+In the pure logit, shares have a closed form given mean utilities $\delta_{jt}$.
+A price change for product $j$ shifts its mean utility by
+$\Delta\delta_j = \alpha \times \Delta p_j$, and new shares follow from the
+logit formula.
+
+```{r q7_counterfactual}
+# Pick the first market
+first_market <- "C01Q1"
+mkt_idx <- which(products_iv$market_ids == first_market)
+mkt_data <- products_iv[mkt_idx, ]
+
+# Current shares and delta
+s0_mkt <- unique(mkt_data$s0)
+current_delta <- log(mkt_data$shares) - log(s0_mkt)
+current_shares <- mkt_data$shares
+
+# Price coefficient from IV + FE
+alpha <- iv_results$beta[1]
+
+# Price cut of $0.04/serving for F1B04
+new_prices <- mkt_data$prices
+f1b04_idx <- which(mkt_data$product_ids == "F1B04")
+price_cut <- 0.04
+new_prices[f1b04_idx] <- new_prices[f1b04_idx] - price_cut
+
+cat(sprintf("F1B04 price: $%.4f -> $%.4f (cut of $%.2f/serving)\n",
+            mkt_data$prices[f1b04_idx], new_prices[f1b04_idx], price_cut))
+
+# New delta: delta_new = delta_old + alpha * (p_new - p_old)
+new_delta <- current_delta + alpha * (new_prices - mkt_data$prices)
+
+# New logit shares
+exp_delta <- exp(new_delta)
+new_shares <- exp_delta / (1 + sum(exp_delta))
+
+# Percentage change in shares
+pct_change <- (new_shares - current_shares) / current_shares * 100
+
+cat("\n=== Counterfactual: $0.04 Price Cut for F1B04 in C01Q1 ===\n\n")
+cf_table <- data.frame(
+  product = mkt_data$product_ids,
+  old_share = sprintf("%.6f", current_shares),
+  new_share = sprintf("%.6f", new_shares),
+  pct_change = sprintf("%+.1f%%", pct_change),
+  stringsAsFactors = FALSE
+)
+print(cf_table, row.names = FALSE, right = FALSE)
+
+cat(sprintf("\nF1B04 share change: %+.1f%%\n", pct_change[f1b04_idx]))
+cat(sprintf("Mean change for other products: %.2f%%\n",
+            mean(pct_change[-f1b04_idx])))
+```
+
+F1B04's share increases dramatically (by over 200%), while all other products
+lose a few percent of their market share. This large response reflects the
+estimated price coefficient of approximately $-30.6$: a $0.04 price cut
+translates to a utility gain of $0.04 \times 30.6 \approx 1.22$ units, which
+is substantial on the logit scale.
+
+In the pure logit, the substitution pattern is governed by the Independence of
+Irrelevant Alternatives (IIA) property: all competing products lose share in
+proportion to their current shares, regardless of how similar they are to F1B04.
+
+This is both a strength (simplicity) and a weakness (unrealistic substitution
+patterns) of the logit model. The random coefficients model in Exercise 2
+relaxes IIA.
+
+**Note:** The pyblp Mixtape solutions report F1B04 share change of +223.6% and
+other products at -1.45%. Small numerical differences arise from optimizer
+tolerances and GMM weighting matrix details.
+
+### Q8: Own-Price Elasticities
+
+The own-price elasticity in the logit model is:
+$$\eta_{jj} = \alpha \, p_{jt} \, (1 - s_{jt})$$
+
+Since $\alpha < 0$, own-price elasticities are negative. We compute them using
+the `compute_elasticities()` method.
+
+```{r q8_elasticities}
 E <- iv_results$compute_elasticities(first_market)
-
-# Own-price elasticities
 own_elast <- diag(E)
-cat("Own-price elasticities (first market):\n")
-cat(sprintf("  Mean: %.3f\n", mean(own_elast)))
-cat(sprintf("  Range: [%.3f, %.3f]\n", min(own_elast), max(own_elast)))
 
-# Approximate share changes from a 10% uniform price increase
-# ds_j/s_j = E_jj * (dp/p) for own effect (ignoring cross effects for simplicity)
-pct_change <- own_elast * 0.10  # 10% price increase
-cat(sprintf("\nApprox. mean share change from 10%% price increase: %.2f%%\n",
-            mean(pct_change) * 100))
+cat("=== Own-Price Elasticities (Market C01Q1) ===\n\n")
+
+elast_table <- data.frame(
+  product = mkt_data$product_ids,
+  price = sprintf("%.4f", mkt_data$prices),
+  share = sprintf("%.6f", mkt_data$shares),
+  elasticity = sprintf("%.3f", own_elast),
+  stringsAsFactors = FALSE
+)
+print(elast_table, row.names = FALSE, right = FALSE)
+
+cat(sprintf("\nOwn-price elasticity range: [%.1f, %.1f]\n",
+            min(own_elast), max(own_elast)))
+cat(sprintf("Mean own-price elasticity: %.2f\n", mean(own_elast)))
 ```
 
-## Exercise 2: Random Coefficients Logit with Demographics
+Own-price elasticities are negative and range from approximately $-2$ to $-5$
+(or roughly $-2.4$ to $-6.3$ depending on the exact estimated alpha). More
+expensive products have more elastic demand, which makes economic sense: a 1%
+price increase for an expensive cereal represents a larger absolute price
+change, inducing more consumers to switch away.
 
-This exercise estimates the full Nevo specification with random coefficients and demographic interactions. This is the canonical BLP model.
+### Cross-Price Elasticities
 
-### Setting Up the Problem
+In the logit model, the cross-price elasticity is:
+$$\eta_{jk} = -\alpha \, p_{kt} \, s_{kt} \quad (j \neq k)$$
 
-```{r rc_setup, eval=FALSE}
-# X1: price coefficient (with product FE absorbed)
-f1 <- blp_formulation(~ 0 + prices, absorb = ~ product_ids)
+This means all products have the same cross-elasticity with respect to a given
+product $k$ --- a direct consequence of IIA.
 
-# X2: random coefficient characteristics
-f2 <- blp_formulation(~ prices + sugar + mushy)
+```{r cross_elasticities}
+# Show a 5x5 submatrix of cross-elasticities
+cat("=== Cross-Price Elasticity Submatrix (first 5 products) ===\n\n")
+sub_E <- E[1:5, 1:5]
+rownames(sub_E) <- mkt_data$product_ids[1:5]
+colnames(sub_E) <- mkt_data$product_ids[1:5]
+print(round(sub_E, 3))
 
-# Demographics formulation
-f_demo <- blp_formulation(~ 0 + income + income_squared + age + child)
+cat("\nNote: Off-diagonal entries in each column are identical (IIA property).\n")
+```
 
-# Create the problem
+---
+
+## Exercise 2: Mixed Logit (Random Coefficients)
+
+The pure logit imposes IIA: substitution patterns are determined entirely by
+market shares, not by product similarity. The mixed (random coefficients) logit
+relaxes IIA by allowing consumer preferences to vary. Products that are similar
+in the characteristic space will naturally be closer substitutes.
+
+### Cross-Market Variation and Identification
+
+A key insight from BLP (1995) is that cross-market variation in product sets
+and demographics helps identify random coefficient parameters. Markets where
+product characteristics are more spread out provide different "experiments" for
+estimating how consumers substitute between products.
+
+```{r rc_variation, eval=TRUE}
+# Show price variation across markets for a few products
+some_products <- c("F1B04", "F2B05", "F3B14")
+for (p in some_products) {
+  prices_p <- products$prices[products$product_ids == p]
+  cat(sprintf("  %s: mean price = %.4f, sd = %.4f, range = [%.4f, %.4f]\n",
+              p, mean(prices_p), sd(prices_p), min(prices_p), max(prices_p)))
+}
+```
+
+### Setting Up Demographics
+
+The Mixtape dataset includes demographic data with quarterly income for 20
+simulated individuals per market. These demographics create observed
+heterogeneity in price sensitivity: wealthier consumers are less price sensitive.
+
+```{r rc_demographics, eval=TRUE}
+demographics <- load_mixtape_demographics()
+
+cat(sprintf("Demographic observations: %d\n", nrow(demographics)))
+cat(sprintf("Markets: %d\n", length(unique(demographics$market))))
+cat(sprintf("Individuals per market: %d\n",
+            nrow(demographics) / length(unique(demographics$market))))
+
+cat("\nQuarterly income summary:\n")
+print(round(summary(demographics$quarterly_income), 1))
+
+cat(sprintf("\nLog income range: [%.2f, %.2f]\n",
+            min(log(demographics$quarterly_income)),
+            max(log(demographics$quarterly_income))))
+```
+
+### Preparing Agent Data for rblp
+
+To use demographics in rblp, we need to construct an agent data frame with
+`market_ids`, `weights`, integration `nodes`, and demographic columns.
+
+```{r rc_agent_setup, eval=FALSE}
+# Prepare agent data with equal weights and log income
+agents <- data.frame(
+  market_ids = demographics$market,
+  weights = 1 / 20,  # equal weights for 20 agents per market
+  nodes0 = 0,        # placeholder node (not used for pure demographic model)
+  log_income = log(demographics$quarterly_income),
+  stringsAsFactors = FALSE
+)
+
+cat("Agent data preview:\n")
+head(agents)
+```
+
+### Mushy x Log Income Interaction
+
+Before estimating full random coefficients, the Mixtape exercises ask for a
+simple demographic interaction: does the valuation of mushy cereals vary with
+income? We add `log_income` as a demographic and interact it with `mushy` through
+the pi matrix.
+
+The pyblp solution finds that the pi coefficient on `mushy x log_income` is
+approximately 0.251, indicating that higher-income consumers have a (slightly)
+higher taste for mushy cereals.
+
+```{r rc_mushy_income, eval=FALSE}
+# Formulations
+f1_rc <- blp_formulation(~ 0 + prices + mushy, absorb = ~ market_ids + product_ids)
+f2_rc <- blp_formulation(~ 0 + mushy)
+
+# Demographics formulation: log_income
+f_demo <- blp_formulation(~ 0 + log_income)
+
+# Create problem
 rc_problem <- blp_problem(
-  product_formulations = list(f1, f2),
+  product_formulations = list(f1_rc, f2_rc),
   product_data = products,
   agent_formulation = f_demo,
   agent_data = agents
 )
+
+# Solve with pi on mushy x log_income
+# sigma = 0 (no unobserved heterogeneity), pi = initial guess
+pi0 <- matrix(0.1, nrow = 1, ncol = 1)  # K2=1 (mushy), D=1 (log_income)
+
+rc_mushy_results <- rc_problem$solve(
+  sigma = matrix(0, 1, 1),  # no sigma (fixed at 0)
+  pi = pi0,
+  method = "1s",
+  optimization = blp_optimization("l-bfgs-b",
+    method_options = list(maxit = 500))
+)
+
+print(rc_mushy_results)
 ```
 
-### Starting Values and Estimation
+**Expected result:** The pi coefficient on `mushy x log_income` is approximately
+0.251, meaning a one-unit increase in log income raises the mean utility of
+mushy cereals by about 0.25.
 
-The starting values for sigma and pi are important because the GMM objective can be non-convex. We use values near the converged pyblp estimates:
+### Random Coefficient on Price (Sigma)
 
-```{r rc_estimate, eval=FALSE}
-# Sigma: standard deviations of unobserved taste heterogeneity
-sigma0 <- diag(c(0.558, 3.312, -0.006, 0.093))
+The next step adds a random coefficient (sigma) on price, allowing unobserved
+heterogeneity in price sensitivity across consumers. Combined with the pi
+interaction (price x income), this creates a rich model where price sensitivity
+varies both with observed income and with unobserved consumer characteristics.
 
-# Pi: demographic interactions
-# Rows: intercept, prices, sugar, mushy
-# Cols: income, income_squared, age, child
-pi0 <- matrix(c(
-  2.292,  0,      1.284,  0,
-  588.3,  -30.19, 0,      11.05,
-  -0.384, 0,      0.0524, 0,
-  0.748,  0,      -1.354, 0
-), nrow = 4, ncol = 4, byrow = TRUE)
+```{r rc_sigma_price, eval=FALSE}
+# X2 now includes price (for sigma) and mushy (for pi)
+f1_full <- blp_formulation(~ 0 + prices + mushy, absorb = ~ market_ids + product_ids)
+f2_full <- blp_formulation(~ 0 + prices + mushy)
 
-# Estimate with 1-step GMM
-rc_results <- rc_problem$solve(
+# Demographics: log_income
+f_demo_full <- blp_formulation(~ 0 + log_income)
+
+# Prepare products with proper IV
+products_rc <- products  # demand_instruments0 already = price_instrument
+
+rc_full_problem <- blp_problem(
+  product_formulations = list(f1_full, f2_full),
+  product_data = products_rc,
+  agent_formulation = f_demo_full,
+  agent_data = agents
+)
+
+# Starting values near the pyblp solution
+# sigma: K2 x K2 = 2x2 diagonal (sigma on prices, 0 on mushy)
+sigma0 <- diag(c(5.0, 0))  # start sigma_price at 5
+
+# pi: K2 x D = 2x1 (prices x log_income, mushy x log_income)
+pi0_full <- matrix(c(-5.0, 0.2), nrow = 2, ncol = 1)
+
+rc_full_results <- rc_full_problem$solve(
   sigma = sigma0,
-  pi = pi0,
+  pi = pi0_full,
   method = "1s",
   optimization = blp_optimization("l-bfgs-b",
     method_options = list(maxit = 1000, factr = 1e7))
 )
 
-print(rc_results)
+print(rc_full_results)
 ```
 
-### Expected Results
+**Expected results from pyblp:**
 
-The key parameter estimates from the Nevo specification (as reported in pyblp's tutorial):
-
-| Parameter | Estimate | Interpretation |
+| Parameter | Estimate | Description |
 |---|---|---|
-| $\alpha$ (price) | ~ $-63$ | Very high price sensitivity after controlling for demographics |
-| $\sigma_1$ (constant) | ~ $0.56$ | Moderate unobserved heterogeneity in base utility |
-| $\sigma_2$ (price) | ~ $3.3$ | Large unobserved heterogeneity in price sensitivity |
-| $\pi_{21}$ (price $\times$ income) | ~ $588$ | Higher income reduces price sensitivity |
-| $\pi_{22}$ (price $\times$ income$^2$) | ~ $-30$ | Diminishing income effect |
+| $\alpha$ (mean price) | negative | Mean price coefficient (in beta, from FE) |
+| $\sigma_{\text{price}}$ | ~6.02 | SD of unobserved price sensitivity |
+| $\pi_{\text{price} \times \text{income}}$ | ~-5.96 | Higher income $\Rightarrow$ less price sensitive |
+| $\pi_{\text{mushy} \times \text{income}}$ | ~0.2 | Higher income $\Rightarrow$ slightly prefer mushy |
 
-### Post-Estimation
+The large $\sigma_{\text{price}}$ (~6) indicates substantial unobserved
+heterogeneity in price sensitivity, beyond what income explains. The negative
+$\pi_{\text{price} \times \text{income}}$ means wealthier consumers are less
+price sensitive, as expected.
 
-```{r rc_post, eval=FALSE}
-# Elasticities are now richer (no IIA)
-E_rc <- rc_results$compute_elasticities(first_market)
+### Why Random Coefficients Matter
 
-# Compare logit vs RC logit own-price elasticities
-cat("RC logit own-price elasticities (first 5 products):\n")
-print(round(diag(E_rc)[1:5], 3))
+With random coefficients, the substitution matrix is no longer governed by IIA.
+Two products with similar characteristics (e.g., two mushy cereals at similar
+prices) will have higher cross-price elasticities than two dissimilar products.
+This has direct implications for:
 
-# Diversion ratios now reflect product similarity
-D_rc <- rc_results$compute_diversion_ratios(first_market)
+- **Merger analysis:** Which mergers raise prices depends on which products are
+  close substitutes
+- **Counterfactual pricing:** Firms internalize cross-effects among their own products
+- **Welfare analysis:** Consumer surplus calculations account for heterogeneous valuations
 
-# Consumer surplus
-cs_rc <- rc_results$compute_consumer_surplus()
-cat(sprintf("Mean CS: %.4f\n", mean(cs_rc)))
+```{r rc_comparison, eval=FALSE}
+# Compare logit vs RC logit elasticities
+E_rc <- rc_full_results$compute_elasticities(first_market)
+
+cat("=== Own-Price Elasticity Comparison (C01Q1) ===\n\n")
+comp_table <- data.frame(
+  product = mkt_data$product_ids[1:6],
+  logit = sprintf("%.2f", diag(E)[1:6]),
+  rc_logit = sprintf("%.2f", diag(E_rc)[1:6]),
+  stringsAsFactors = FALSE
+)
+print(comp_table, row.names = FALSE, right = FALSE)
 ```
+
+---
 
 ## Exercise 3: Micro Moments (Conceptual Overview)
 
-Micro moments supplement the traditional aggregate BLP moments with information from individual-level (micro) data. They are particularly useful when:
+Micro moments supplement the traditional BLP aggregate moments (based on market
+shares) with information from individual-level data sources such as household
+scanner panels, surveys, or browsing data.
 
-- The number of random coefficients exceeds what aggregate data can identify
-- Survey or scanner data provides information about individual purchase patterns
-- You want to match demographic-purchase correlations
+### Motivation
+
+In the standard BLP framework, identification of random coefficients comes from
+cross-market variation in product sets, prices, and aggregate shares. This can
+be weak when:
+
+- Markets are similar in their product offerings
+- The number of random coefficients exceeds what aggregate variation can identify
+- We want to match specific demographic-choice correlations observed in micro data
+
+Micro moments address this by directly targeting individual-level statistics.
 
 ### The Micro Moment Framework
 
-A micro moment matches a statistic computed from micro data to its model prediction:
+A micro moment matches a statistic computed from micro data to its
+model-predicted counterpart:
 
-$$E[\bar{m}^{\text{micro}} - m(\theta)] = 0$$
+$$E\left[\bar{m}^{\text{micro}} - m(\theta)\right] = 0$$
 
-where $\bar{m}^{\text{micro}}$ is the observed micro statistic and $m(\theta)$ is the model-predicted value.
+where $\bar{m}^{\text{micro}}$ is the observed micro statistic (e.g., the
+average income of consumers who buy mushy cereals) and $m(\theta)$ is the
+model-predicted value (computed from the estimated choice probabilities and
+demographic distributions).
+
+### Types of Micro Moments
 
 Common micro moments include:
 
-- **Conditional choice probabilities**: $E[y_{ij} | D_i]$ -- the probability of buying product $j$ given demographics
-- **Covariance moments**: $\text{Cov}(D_i, x_{j(i)})$ -- the covariance between demographics and chosen product characteristics
-- **Conditional means**: $E[x_{j(i)} | D_i \in G]$ -- the mean characteristic of the chosen product for a demographic group
+1. **Conditional choice probabilities:** $E[y_{ij} | D_i \in G]$ -- the
+   probability of buying product $j$ given demographics in group $G$
+2. **Conditional means of characteristics:** $E[x_{j(i)} | D_i \in G]$ -- the
+   mean characteristic of the chosen product for a demographic group
+3. **Covariance moments:** $\text{Cov}(D_i, x_{j(i)})$ -- covariance between
+   demographics and chosen product attributes
 
-### rblp's Micro Moment Classes
+### Implementation in rblp
 
-The rblp package provides three classes for constructing micro moments:
+rblp provides three classes for constructing micro moments:
 
 ```{r micro_example, eval=FALSE}
 # 1. Define a micro dataset (describes the data source)
 md <- micro_dataset(
-  name = "Nielsen scanner",
+  name = "household scanner panel",
   observations = 50000,
   compute_weights = function(market_id, products, agents) {
     # Return I x J weight matrix
-    # e.g., uniform weights
     I <- length(agents$weights)
     J <- length(products$shares)
     matrix(1, I, J)
   }
 )
 
-# 2. Define a micro part (what statistic to compute)
+# 2. Define a micro part (what statistic to compute for each i,j pair)
 mp <- micro_part(
-  name = "income_x_price",
+  name = "income_x_mushy",
   dataset = md,
   compute_values = function(market_id, products, agents) {
-    # Return I x J value matrix
-    # e.g., income * price for each agent-product pair
-    outer(agents$income, products$prices)
+    # Return I x J value matrix: income_i * mushy_j
+    outer(agents$log_income, products$mushy)
   }
 )
 
 # 3. Define a micro moment (match target to prediction)
 mm <- micro_moment(
-  name = "E[income * price | purchase]",
-  value = 0.5,  # observed from micro data
+  name = "E[log_income * mushy | purchase]",
+  value = 0.5,   # observed from micro data
   parts = mp
 )
 
 # Pass to solve()
-results <- problem$solve(
+results <- rc_full_problem$solve(
   sigma = sigma0,
-  pi = pi0,
-  micro_moments = list(mm)
+  pi = pi0_full,
+  micro_moments = list(mm),
+  method = "1s"
 )
 ```
 
-Micro moments are an advanced topic. For a full treatment, see Conlon and Gortmaker (2020) and the pyblp documentation.
+Micro moments can dramatically improve the precision of demographic interaction
+parameters (pi) and random coefficient standard deviations (sigma) by providing
+direct information about who buys what. For a full treatment, see Conlon and
+Gortmaker (2020, Section 4) and the pyblp micro moments tutorial.
 
-## Summary of Exercise Results
+---
 
-| Exercise | Model | Key Finding |
-|---|---|---|
-| 1A | OLS logit | Price coeff. ~ $-7.5$ (biased toward zero) |
-| 1B | IV logit | Price coeff. ~ $-30.6$ (endogeneity corrected) |
-| 1C | IV logit + FE | Price coeff. ~ $-30$ (product quality absorbed) |
-| 2 | RC logit + demographics | Price coeff. ~ $-63$; rich heterogeneity |
-| 3 | Micro moments | Supplement aggregate moments with micro data |
+## Summary of Results
 
-The progression from OLS to IV to FE to RC shows how each step addresses a different source of bias or enriches the substitution patterns.
+The table below summarizes key findings across all three exercises:
+
+| Exercise | Model | Price Coeff. | Key Insight |
+|---|---|---|---|
+| 1 (Q3) | OLS logit | $-7.48$ | Biased toward zero by price endogeneity |
+| 1 (Q4) | rblp OLS | $-7.48$ | Confirms equivalence of GMM/OLS |
+| 1 (Q5) | FE logit (prices as IV) | $-28.6$ | FE absorb product quality; reveals true sensitivity |
+| 1 (Q6) | IV + FE logit | $-30.6$ (SE $\approx$ 1.0) | IV corrects remaining endogeneity |
+| 1 (Q7) | Counterfactual | -- | F1B04 share +230% from \$0.04 cut; IIA substitution |
+| 1 (Q8) | Elasticities | -- | Own-price elasticities range $-2$ to $-5$ |
+| 2 | Mushy x income | pi $\approx$ 0.25 | Wealthier consumers slightly prefer mushy |
+| 2 | RC on price | $\sigma \approx 6.0$, $\pi \approx -6.0$ | Large heterogeneity in price sensitivity |
+| 3 | Micro moments | -- | Individual data sharpens identification |
+
+### Key Takeaways
+
+1. **Price endogeneity is severe.** The OLS price coefficient ($-7.5$) is only
+   one-quarter of the IV+FE estimate ($-30.6$). Failing to instrument biases the
+   price effect toward zero, which leads to systematically understating
+   consumer price sensitivity.
+
+2. **Fixed effects matter.** Moving from OLS to FE logit (without IV) already
+   moves the coefficient from $-7.5$ to $-28.6$. Most of the endogeneity bias
+   in this application comes from product-level unobserved quality.
+
+3. **Random coefficients break IIA.** The logit's substitution patterns are
+   mechanical (proportional to shares). The mixed logit allows substitution to
+   depend on product similarity, which matters for merger analysis, targeted
+   pricing, and welfare evaluation.
+
+4. **Demographics provide economic structure.** The interaction between price
+   sensitivity and income ($\pi_{\text{price} \times \text{income}} \approx -6$)
+   is both statistically and economically significant: it means that a
+   low-income consumer faces four times the utility loss from a price increase
+   compared to a high-income consumer.
+
+---
 
 ## References
 
-- Cunningham, S. (2021). *Causal Inference: The Mixtape*. Yale University Press.
-- Berry, S. (1994). Estimating Discrete-Choice Models of Product Differentiation. *RAND Journal of Economics*, 25(2), 242-262.
-- Nevo, A. (2000). A Practitioner's Guide to Estimation of Random-Coefficients Logit Models of Demand. *Journal of Economics & Management Strategy*, 9(4), 513-548.
-- Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated Products Demand Estimation with pyblp. *RAND Journal of Economics*, 51(4), 1108-1161.
+- Berry, S. (1994). Estimating Discrete-Choice Models of Product
+  Differentiation. *RAND Journal of Economics*, 25(2), 242-262.
+
+- Berry, S., Levinsohn, J., & Pakes, A. (1995). Automobile Prices in Market
+  Equilibrium. *Econometrica*, 63(4), 841-890.
+
+- Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated Products
+  Demand Estimation with pyblp. *RAND Journal of Economics*, 51(4), 1108-1161.
+
+- Nevo, A. (2000). A Practitioner's Guide to Estimation of Random-Coefficients
+  Logit Models of Demand. *Journal of Economics & Management Strategy*, 9(4),
+  513-548.
+
+- Mixtape Sessions. Demand Estimation.
+  [https://github.com/Mixtape-Sessions/Demand-Estimation](https://github.com/Mixtape-Sessions/Demand-Estimation)

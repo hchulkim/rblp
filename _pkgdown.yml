@@ -136,6 +136,11 @@ reference:
       - nevo_agents
       - blp_products
       - blp_agents
+      - load_mixtape_products
+      - load_mixtape_demographics
+      - prepare_mixtape_data
+      - mixtape_products
+      - mixtape_demographics
 
   - title: "Options"
     desc: "Package-wide configuration options."

@@ -190,6 +190,98 @@ load_blp_agents <- function() {
   find_extdata_("blp_agents.csv")
 }
 
+#' Mixtape Sessions Cereal Product Data
+#'
+#' Simplified Nevo (2000) cereal data from the Mixtape Sessions demand
+#' estimation exercises. Contains 2256 product-market observations with
+#' raw quantities and a single price instrument.
+#'
+#' @format A data frame with 2256 rows and the following columns:
+#' \describe{
+#'   \item{market}{Market identifier (city-quarter)}
+#'   \item{product}{Product identifier (firm-brand)}
+#'   \item{mushy}{Mushiness indicator (0/1)}
+#'   \item{servings_sold}{Total servings sold in the market}
+#'   \item{city_population}{City population}
+#'   \item{price_per_serving}{Price per serving (dollars)}
+#'   \item{price_instrument}{Excluded instrument for price}
+#' }
+#'
+#' @references
+#' Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated
+#' Products Demand Estimation with pyblp. \emph{RAND Journal of Economics},
+#' 51(4), 1108-1161.
+#'
+#' @source \url{https://github.com/Mixtape-Sessions/Demand-Estimation}
+"mixtape_products"
+
+#' Mixtape Sessions Cereal Demographic Data
+#'
+#' Demographic data for the Mixtape Sessions demand estimation exercises.
+#' Contains 20 individuals per market drawn from the Current Population Survey.
+#'
+#' @format A data frame with 1880 rows and the following columns:
+#' \describe{
+#'   \item{market}{Market identifier (must match mixtape_products)}
+#'   \item{quarterly_income}{Quarterly income in dollars}
+#' }
+#'
+#' @references
+#' Conlon, C. & Gortmaker, J. (2020). Best Practices for Differentiated
+#' Products Demand Estimation with pyblp. \emph{RAND Journal of Economics},
+#' 51(4), 1108-1161.
+#'
+#' @source \url{https://github.com/Mixtape-Sessions/Demand-Estimation}
+"mixtape_demographics"
+
+#' Load Mixtape Sessions cereal product data
+#'
+#' @return Data frame with Mixtape cereal product data
+#' @export
+load_mixtape_products <- function() {
+  find_extdata_("mixtape_products.csv")
+}
+
+#' Load Mixtape Sessions cereal demographic data
+#'
+#' @return Data frame with Mixtape cereal demographic data
+#' @export
+load_mixtape_demographics <- function() {
+  find_extdata_("mixtape_demographics.csv")
+}
+
+#' Prepare Mixtape product data for rblp estimation
+#'
+#' Transforms raw Mixtape product data into the format required by
+#' \code{\link{blp_problem}}: computes market shares from quantities,
+#' renames columns, and sets up instruments.
+#'
+#' @param products Data frame from \code{\link{load_mixtape_products}}
+#' @param servings_per_person Potential servings per person per quarter
+#'   (default: 90, i.e. one serving per day for 90 days)
+#' @return Data frame ready for \code{\link{blp_problem}}
+#' @export
+prepare_mixtape_data <- function(products, servings_per_person = 90) {
+  # Market size: population * servings per person per quarter
+  products$market_size <- products$city_population * servings_per_person
+
+  # Market shares
+  products$shares <- products$servings_sold / products$market_size
+
+  # Rename columns for rblp
+  products$market_ids <- products$market
+  products$product_ids <- products$product
+  products$prices <- products$price_per_serving
+
+  # Extract firm_ids from product (first 2 chars, e.g., "F1" from "F1B04")
+  products$firm_ids <- substr(products$product, 1, 2)
+
+  # Set price_instrument as the excluded demand instrument
+  products$demand_instruments0 <- products$price_instrument
+
+  products
+}
+
 #' Find and load extdata file (works in both installed and development mode)
 #' @param filename CSV file name
 #' @return Data frame
