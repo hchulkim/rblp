@@ -76,13 +76,15 @@ cat("\nRC Logit Results (no demographics):\n")
 print(rc_results)
 
 # =============================================================================
-# Example 4: RC Logit with Demographics
+# Example 4: RC Logit with Demographics (pyblp Nevo tutorial specification)
 # =============================================================================
 cat("\n--- Example 4: RC Logit with Demographics ---\n")
-cat("Uses agent data with income, age, child demographics\n")
+cat("Matches pyblp Nevo tutorial: X1 = prices w/ product FE, X2 = 1 + prices + sugar + mushy\n")
 cat("Pi matrix: K2 x D = 4 x 4 demographic interactions\n\n")
 
-f1_demo <- blp_formulation(~ prices + sugar + mushy)
+# pyblp: Formulation('0 + prices', absorb='C(product_ids)') for X1
+# pyblp: Formulation('1 + prices + sugar + mushy') for X2
+f1_demo <- blp_formulation(~ 0 + prices, absorb = ~ product_ids)
 f2_demo <- blp_formulation(~ prices + sugar + mushy)
 demo_form <- blp_formulation(~ 0 + income + income_squared + age + child)
 
@@ -97,24 +99,26 @@ cat(sprintf("Problem: K1=%d, K2=%d, D=%d, MD=%d, I=%d\n",
             demo_problem$K1, demo_problem$K2, demo_problem$D,
             demo_problem$MD, demo_problem$I))
 
-# Starting values close to Nevo's published estimates
-sigma0 <- diag(c(0.3302, 2.4526, 0.0163, 0.2441))
+# Starting values from pyblp's converged estimates (Nevo published values
+# may converge to different local optima depending on the optimizer)
+sigma0 <- diag(c(0.558, 3.312, -0.006, 0.093))
 pi0 <- matrix(c(
-  5.4819, 0, 0.2037, 0,
-  15.8935, -1.2000, 0, 2.6342,
-  -0.2506, 0, 0.0511, 0,
-  1.2650, 0, -0.8091, 0
+  2.292, 0, 1.284, 0,
+  588.3, -30.19, 0, 11.05,
+  -0.384, 0, 0.0524, 0,
+  0.748, 0, -1.354, 0
 ), nrow = 4, ncol = 4, byrow = TRUE)
 
 demo_results <- demo_problem$solve(
   sigma = sigma0, pi = pi0,
   method = "1s",
   optimization = blp_optimization("l-bfgs-b",
-    method_options = list(maxit = 500, factr = 1e7))
+    method_options = list(maxit = 1000, factr = 1e7))
 )
 
 cat("\nRC Logit with Demographics Results:\n")
 print(demo_results)
+cat(sprintf("  --> pyblp reports alpha ~ -63 for this specification\n"))
 
 # =============================================================================
 # Example 5: Post-Estimation

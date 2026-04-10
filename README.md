@@ -82,9 +82,10 @@ print(rc_results)
 agents <- load_nevo_agents()
 demo_form <- blp_formulation(~ 0 + income + income_squared + age + child)
 
+# pyblp specification: prices with product FE in X1, full X2
 demo_problem <- blp_problem(
   product_formulations = list(
-    blp_formulation(~ prices + sugar + mushy),
+    blp_formulation(~ 0 + prices, absorb = ~ product_ids),
     blp_formulation(~ prices + sugar + mushy)
   ),
   product_data = products,
@@ -92,21 +93,23 @@ demo_problem <- blp_problem(
   agent_data = agents
 )
 
-sigma0 <- diag(c(0.3302, 2.4526, 0.0163, 0.2441))
+# Starting values near pyblp's converged estimates
+sigma0 <- diag(c(0.558, 3.312, -0.006, 0.093))
 pi0 <- matrix(c(
-  5.4819, 0, 0.2037, 0,
-  15.8935, -1.2000, 0, 2.6342,
-  -0.2506, 0, 0.0511, 0,
-  1.2650, 0, -0.8091, 0
+  2.292, 0, 1.284, 0,
+  588.3, -30.19, 0, 11.05,
+  -0.384, 0, 0.0524, 0,
+  0.748, 0, -1.354, 0
 ), nrow = 4, ncol = 4, byrow = TRUE)
 
 demo_results <- demo_problem$solve(
   sigma = sigma0, pi = pi0,
   method = "1s",
   optimization = blp_optimization("l-bfgs-b",
-    method_options = list(maxit = 500, factr = 1e7))
+    method_options = list(maxit = 1000, factr = 1e7))
 )
 print(demo_results)
+# Price coefficient ~ -63, matching pyblp
 ```
 
 ---

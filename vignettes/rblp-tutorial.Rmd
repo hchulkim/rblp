@@ -128,10 +128,12 @@ head(agents[, c("market_ids", "weights", "income", "age", "child")])
 # Demographics formulation (no intercept)
 demo_form <- blp_formulation(~ 0 + income + income_squared + age + child)
 
+# pyblp specification: X1 = '0 + prices' with product FE absorbed
+# X2 = '1 + prices + sugar + mushy' (with intercept)
 demo_problem <- blp_problem(
   product_formulations = list(
-    blp_formulation(~ prices + sugar + mushy),  # X1
-    blp_formulation(~ prices + sugar + mushy)   # X2
+    blp_formulation(~ 0 + prices, absorb = ~ product_ids),  # X1
+    blp_formulation(~ prices + sugar + mushy)                # X2
   ),
   product_data = products,
   agent_formulation = demo_form,
@@ -139,23 +141,24 @@ demo_problem <- blp_problem(
 )
 
 # Sigma (4x4 diagonal) and Pi (4x4, K2 x D)
-# Starting values from Nevo's published estimates
-sigma0 <- diag(c(0.3302, 2.4526, 0.0163, 0.2441))
+# Starting values near pyblp's converged estimates
+sigma0 <- diag(c(0.558, 3.312, -0.006, 0.093))
 pi0 <- matrix(c(
-  5.4819, 0, 0.2037, 0,
-  15.8935, -1.2000, 0, 2.6342,
-  -0.2506, 0, 0.0511, 0,
-  1.2650, 0, -0.8091, 0
+  2.292, 0, 1.284, 0,
+  588.3, -30.19, 0, 11.05,
+  -0.384, 0, 0.0524, 0,
+  0.748, 0, -1.354, 0
 ), nrow = 4, ncol = 4, byrow = TRUE)
 
 demo_results <- demo_problem$solve(
   sigma = sigma0, pi = pi0,
   method = "1s",
   optimization = blp_optimization("l-bfgs-b",
-    method_options = list(maxit = 500, factr = 1e7))
+    method_options = list(maxit = 1000, factr = 1e7))
 )
 
 print(demo_results)
+# Price coefficient ~ -63, matching pyblp's Nevo tutorial
 ```
 
 ## Post-Estimation

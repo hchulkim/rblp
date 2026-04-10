@@ -372,12 +372,20 @@ BLPProblem <- R6::R6Class("BLPProblem",
       X1 <- self$products$X1
       ZD <- self$products$ZD
 
-      # Apply absorb demeaning to delta (X1 and ZD already demeaned)
+      # Apply absorb demeaning to delta and xi_jacobian (X1 and ZD already demeaned)
       delta_iv <- delta_new
       if (!is.null(private$absorb_groups_)) {
         grp <- private$absorb_groups_
         gm <- tapply(delta_iv, grp, mean)
         delta_iv <- as.numeric(delta_iv - gm[match(grp, names(gm))])
+
+        # Demean the xi_jacobian within absorb groups (FWL consistency)
+        if (!is.null(full_xi_jac)) {
+          for (j in seq_len(ncol(full_xi_jac))) {
+            gm_j <- tapply(full_xi_jac[, j], grp, mean)
+            full_xi_jac[, j] <- full_xi_jac[, j] - as.numeric(gm_j[match(grp, names(gm_j))])
+          }
+        }
       }
 
       # Extract demand block of W
