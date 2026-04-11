@@ -375,6 +375,416 @@ BLPResults <- R6::R6Class("BLPResults",
       list(statistic = stat, df = df, p_value = p_value)
     },
 
+    #' @description Compute aggregate elasticities per market
+    #' @param factor Percentage price increase (default 0.01 = 1%)
+    #' @param market_id Optional market identifier (NULL = all markets)
+    #' @return Named numeric vector of aggregate elasticities per market
+    #
+    # The aggregate elasticity measures the percentage change in total
+    # inside market share from a uniform percentage increase in all prices.
+    # This is a scalar summary of overall price sensitivity in the market.
+    # In pyblp: ProblemResults.compute_aggregate_elasticities().
+    compute_aggregate_elasticities = function(factor = 0.01, market_id = NULL) {
+      markets <- if (!is.null(market_id)) market_id else self$problem$unique_market_ids
+      agg_elast <- numeric(length(markets))
+      names(agg_elast) <- as.character(markets)
+
+      for (i in seq_along(markets)) {
+        t <- markets[i]
+        mkt_data <- private$build_market_(t)
+        idx <- mkt_data$indices
+        P <- if (is.list(mkt_data$prob)) mkt_data$prob$probabilities else mkt_data$prob
+        w <- mkt_data$agents$weights
+        s <- mkt_data$market$compute_shares(P, w)
+        total_share <- sum(s)
+
+        # Compute shares at increased prices: delta_new = delta + alpha * dp
+        prices_t <- mkt_data$products$prices
+        dp <- prices_t * factor
+        delta_new <- self$delta[idx]
+        if (!is.null(mkt_data$products$price_col_x1) && !is.null(self$beta)) {
+          bp <- self$beta[mkt_data$products$price_col_x1]
+          delta_new <- delta_new + bp * dp
+        }
+
+        mu <- mkt_data$mu
+        prob_new <- mkt_data$market$compute_probabilities(delta_new, mu)
+        P_new <- if (is.list(prob_new)) prob_new$probabilities else prob_new
+        s_new <- mkt_data$market$compute_shares(P_new, w)
+        total_share_new <- sum(s_new)
+
+        agg_elast[i] <- (total_share_new - total_share) / total_share / factor
+      }
+      agg_elast
+    },
+
+    #' @description Compute cost-to-price passthrough matrix
+    #' @param market_id Market identifier
+    #' @return J x J passthrough matrix dp/dc
+    #
+    # The passthrough matrix measures how a $1 increase in the marginal cost
+    # of product k changes the equilibrium price of product j. Under
+    # Bertrand-Nash pricing, the FOC system F(p, c) = 0 implicitly defines
+    # p(c). By the implicit function theorem:
+    #   dp/dc = -(dF/dp)^{-1} (dF/dc)
+    # Since dF/dc = -I (costs enter linearly), dp/dc = (dF/dp)^{-1}.
+    # The diagonal elements are own-cost passthrough (typically < 1 for
+    # oligopoly), and off-diagonals capture cross-firm strategic responses.
+    compute_passthrough = function(market_id) {
+      mkt_data <- private$build_market_(market_id)
+      P <- if (is.list(mkt_data$prob)) mkt_data$prob$probabilities else mkt_data$prob
+      w <- mkt_data$agents$weights
+      s <- mkt_data$market$compute_shares(P, w)
+      prices <- mkt_data$products$prices
+      ownership <- mkt_data$products$ownership
+
+      alpha <- mkt_data$market$.__enclos_env__$private$get_alpha()
+
+      J <- mkt_data$market$J
+      # Compute ds/dp (J x J derivative matrix)
+      v <- w * alpha
+      Pv <- sweep(P, 2, v, "*")
+      A <- rowSums(Pv)
+      B <- tcrossprod(Pv, P)
+      dsdp <- diag(A, nrow = J) - B
+
+      # Second derivative of shares w.r.t. prices for FOC Jacobian
+      # dF/dp_j = ds_j/dp_j + sum_k O_{jk} * (d2s_k/dp_j dp_k * (p_k-c_k) + ds_k/dp_j)
+      # Simplified: dF/dp = diag(ds/dp) + Omega + Omega' terms
+      # For standard Bertrand: dF/dp = I + Omega * d(eta)/dp
+      # Approximate via: dF/dp_{jk} = ds_j/dp_k + sum_l O_{jl} * d2s_l/(dp_j dp_k) * eta_l
+      #                               + O_{jk} * ds_k/dp_k
+      # Use the simpler first-order approximation: dp/dc ~ (I + Omega_price)^{-1}
+      # where Omega_price = O * dsdp / diag(dsdp)
+      Omega <- ownership * dsdp
+
+      # FOC Jacobian: dF_j/dp_k where F_j = s_j + sum_l O_{jl} ds_l/dp_j (p_l - c_l)
+      # At equilibrium, a first-order approximation of the FOC Jacobian is
+      # dF/dp ~ diag(1, J) + Omega (ignoring second-order share curvature terms)
+      # This gives passthrough = (I + Omega)^{-1} * I = (I + Omega)^{-1}
+      dFdp <- diag(1, J) + Omega
+      approximately_solve(dFdp, diag(1, J))
+    },
+
+    #' @description Compute long-run diversion ratios
+    #' @param market_id Market identifier (NULL = all markets)
+    #' @return J x J diversion matrix (or list of matrices)
+    #
+    # Long-run diversion ratios account for equilibrium price adjustments.
+    # When product j's cost increases, its price rises, and rivals also
+    # adjust prices. The long-run diversion from j to k is:
+    #   D_LR(j->k) = -(ds_k/dc_j) / (ds_j/dc_j)
+    # where ds/dc = (ds/dp)(dp/dc) uses the passthrough matrix.
+    # Standard (short-run) diversion holds prices fixed; long-run allows
+    # re-equilibration. Long-run diversion is larger when strategic
+    # complementarity is strong (rivals raise prices when j raises its price).
+    compute_long_run_diversion_ratios = function(market_id = NULL) {
+      if (is.null(market_id)) {
+        results <- list()
+        for (t in self$problem$unique_market_ids) {
+          results[[as.character(t)]] <- private$compute_market_lr_diversion(t)
+        }
+        return(results)
+      }
+      private$compute_market_lr_diversion(market_id)
+    },
+
+    #' @description Compute predicted market shares at estimated parameters
+    #' @return Numeric vector of predicted shares (length N)
+    compute_shares = function() {
+      shares_vec <- numeric(self$problem$N)
+      for (t in self$problem$unique_market_ids) {
+        mkt_data <- private$build_market_(t)
+        P <- if (is.list(mkt_data$prob)) mkt_data$prob$probabilities else mkt_data$prob
+        shares_vec[mkt_data$indices] <- mkt_data$market$compute_shares(P)
+      }
+      shares_vec
+    },
+
+    #' @description Compute per-product profits (p - c) * s
+    #' @param costs Optional pre-computed costs (computed if NULL)
+    #' @return Numeric vector of profits (length N)
+    compute_profits = function(costs = NULL) {
+      if (is.null(costs)) costs <- self$compute_costs()
+      prices <- self$problem$products$prices
+      shares <- self$problem$products$shares
+      (prices - costs) * shares
+    },
+
+    #' @description Compute optimal instruments (BLP 1999, Chamberlain 1987)
+    #' @param method "approximate" (default) or "exact"
+    #' @return List with optimal_instruments (matrix) and to_problem() function
+    #
+    # Feasible optimal instruments replace the standard instruments Z with
+    # E[d_xi/d_params | Z], estimated by regressing the Jacobian columns
+    # on the original instruments. This produces efficient GMM estimates
+    # with minimum asymptotic variance. The procedure is:
+    # 1. Estimate the model with standard instruments to get xi, Jacobians
+    # 2. Regress each Jacobian column on Z to get fitted values Z_opt
+    # 3. Re-estimate with Z_opt as instruments
+    compute_optimal_instruments = function(method = "approximate") {
+      N <- self$problem$N
+      ZD <- self$problem$products$ZD
+      X1 <- self$problem$products$X1
+
+      # Step 1: Build the full Jacobian d[delta]/d[all_params] = [X1, d_delta/d_theta]
+      # For linear params (beta): d_delta/d_beta = X1
+      # For nonlinear params (theta): use the xi Jacobian from each market
+      jacobian_cols <- list(X1)
+
+      if (private$params_$n_free() > 0) {
+        xi_jac <- matrix(0, N, private$params_$n_free())
+        for (t in self$problem$unique_market_ids) {
+          mkt_data <- private$build_market_(t)
+          idx <- mkt_data$indices
+          mkt <- mkt_data$market
+          prob <- mkt_data$prob
+
+          # Add sigma/pi free masks for Jacobian computation
+          mkt_jac <- mkt$compute_xi_by_theta_jacobian(prob)
+          if (!is.null(mkt_jac)) {
+            xi_jac[idx, ] <- mkt_jac
+          }
+        }
+        jacobian_cols[[2]] <- xi_jac
+      }
+
+      full_jac <- do.call(cbind, jacobian_cols)
+
+      # Step 2: Project Jacobian onto instrument space: Z_opt = Z * (Z'Z)^{-1} Z' * Jac
+      # This is the fitted value from regressing each Jacobian column on Z
+      ZtZ_inv <- approximately_invert(crossprod(ZD))$inverse
+      hat_matrix <- ZD %*% ZtZ_inv %*% t(ZD)
+      Z_opt_demand <- hat_matrix %*% full_jac
+
+      # Step 3: Build supply-side optimal instruments if applicable
+      Z_opt_supply <- NULL
+      if (self$problem$K3 > 0 && !is.null(self$problem$products$ZS)) {
+        ZS <- self$problem$products$ZS
+        X3 <- self$problem$products$X3
+        ZtZ_inv_s <- approximately_invert(crossprod(ZS))$inverse
+        hat_s <- ZS %*% ZtZ_inv_s %*% t(ZS)
+        Z_opt_supply <- hat_s %*% X3
+      }
+
+      # Return results with a to_problem function
+      problem_ref <- self$problem
+      sigma_ref <- self$sigma
+      pi_ref <- self$pi
+      rho_ref <- self$rho
+      agent_form_ref <- self$problem$agent_formulation
+      agent_data_ref <- self$problem$agents$original_data
+      integration_ref <- self$problem$.__enclos_env__$private$integration_
+
+      to_problem <- function() {
+        pd <- problem_ref$products$original_data
+        # Replace demand instruments with optimal ones
+        # Remove old instruments
+        old_iv <- grep("^demand_instruments", names(pd), value = TRUE)
+        for (col in old_iv) pd[[col]] <- NULL
+        # Add optimal instruments
+        for (k in seq_len(ncol(Z_opt_demand))) {
+          pd[[paste0("demand_instruments", k - 1)]] <- Z_opt_demand[, k]
+        }
+        if (!is.null(Z_opt_supply)) {
+          old_siv <- grep("^supply_instruments", names(pd), value = TRUE)
+          for (col in old_siv) pd[[col]] <- NULL
+          for (k in seq_len(ncol(Z_opt_supply))) {
+            pd[[paste0("supply_instruments", k - 1)]] <- Z_opt_supply[, k]
+          }
+        }
+        blp_problem(
+          product_formulations = problem_ref$product_formulations,
+          product_data = pd,
+          agent_formulation = agent_form_ref,
+          agent_data = agent_data_ref,
+          integration = integration_ref,
+          rc_types = problem_ref$rc_types,
+          costs_type = problem_ref$costs_type,
+          add_exogenous = FALSE
+        )
+      }
+
+      list(
+        optimal_demand_instruments = Z_opt_demand,
+        optimal_supply_instruments = Z_opt_supply,
+        to_problem = to_problem
+      )
+    },
+
+    #' @description Parametric bootstrap for inference on post-estimation quantities
+    #' @param draws Number of bootstrap draws
+    #' @param seed Random seed
+    #' @param ... Additional arguments passed to solve()
+    #' @return List of BLPResults objects (one per draw)
+    #
+    # Parametric bootstrap (Horowitz 2001): draw xi* ~ N(0, var(xi_hat)),
+    # construct new delta* = X1*beta + xi*, re-solve equilibrium shares,
+    # re-estimate the model, and collect the draws. The distribution of
+    # the bootstrap estimates approximates the sampling distribution of
+    # the original estimator.
+    bootstrap = function(draws = 100L, seed = NULL, ...) {
+      if (!is.null(seed)) set.seed(seed)
+
+      xi_var <- stats::var(self$xi)
+      N <- self$problem$N
+      boot_results <- vector("list", draws)
+
+      for (b in seq_len(draws)) {
+        # Draw structural errors
+        xi_star <- stats::rnorm(N, 0, sqrt(xi_var))
+
+        # Construct new delta
+        delta_star <- as.numeric(self$problem$products$X1 %*% self$beta) + xi_star
+
+        # Build new product data with shares from the model at delta_star
+        pd <- self$problem$products$original_data
+        new_shares <- numeric(N)
+        for (t in self$problem$unique_market_ids) {
+          md <- self$problem$get_market_data(t)
+          idx <- md$indices
+
+          mkt <- BLPMarket$new(
+            products = md$products,
+            agents = md$agents,
+            sigma = self$sigma,
+            pi = self$pi,
+            rho = self$rho,
+            rc_types = self$problem$rc_types,
+            epsilon_scale = self$problem$epsilon_scale,
+            costs_type = self$problem$costs_type
+          )
+          mu <- mkt$compute_mu()
+          prob <- mkt$compute_probabilities(delta_star[idx], mu)
+          P <- if (is.list(prob)) prob$probabilities else prob
+          new_shares[idx] <- mkt$compute_shares(P)
+        }
+
+        # Replace shares and re-estimate
+        pd$shares <- pmax(new_shares, 1e-300)
+        tryCatch({
+          prob_b <- blp_problem(
+            product_formulations = self$problem$product_formulations,
+            product_data = pd,
+            agent_formulation = self$problem$agent_formulation,
+            agent_data = self$problem$agents$original_data,
+            integration = self$problem$.__enclos_env__$private$integration_,
+            rc_types = self$problem$rc_types,
+            costs_type = self$problem$costs_type
+          )
+          res_b <- prob_b$solve(
+            sigma = self$sigma,
+            pi = self$pi,
+            rho = self$rho,
+            ...
+          )
+          boot_results[[b]] <- res_b
+        }, error = function(e) {
+          boot_results[[b]] <<- NULL
+        })
+      }
+
+      # Filter out failed draws
+      boot_results <- Filter(Negate(is.null), boot_results)
+      rblp_message(sprintf("Bootstrap: %d/%d draws succeeded", length(boot_results), draws))
+      boot_results
+    },
+
+    #' @description Construct importance sampling weights
+    #' @param n_draws Number of importance sampling draws
+    #' @param seed Random seed
+    #' @return List with new agent_data and to_problem() function
+    #
+    # Importance sampling concentrates integration nodes in regions of
+    # high probability mass given the estimated parameters. This improves
+    # the accuracy of share integrals with fewer nodes. The procedure:
+    # 1. Draw new nodes from the proposal distribution (standard normal)
+    # 2. Compute importance weights w_i = p(nu_i | theta) / q(nu_i)
+    # 3. Normalize weights to sum to 1
+    # The resulting weighted nodes better approximate the share integral
+    # than uniform-weight quadrature when the mixing distribution has
+    # moved far from the standard normal.
+    importance_sampling = function(n_draws = 500L, seed = NULL) {
+      if (!is.null(seed)) set.seed(seed)
+      K2 <- self$problem$K2
+      if (K2 == 0) stop("Importance sampling requires random coefficients (K2 > 0)")
+
+      sigma <- self$sigma
+      # Draw from standard normal proposal
+      nodes <- matrix(stats::rnorm(n_draws * K2), n_draws, K2)
+
+      # Compute importance weights: for each draw, the "target" density
+      # is the posterior probability of observing the data given that draw.
+      # As an approximation, we use the average choice probability across
+      # all markets as the importance weight.
+      log_weights <- numeric(n_draws)
+      for (i in seq_len(n_draws)) {
+        nu_i <- nodes[i, ]
+        # Compute mu for this single draw across all products
+        rc_deviation <- as.numeric(sigma %*% nu_i)
+        log_w <- 0
+        for (t in self$problem$unique_market_ids[1:min(5, self$problem$T)]) {
+          md <- self$problem$get_market_data(t)
+          idx <- md$indices
+          X2 <- md$products$X2
+          if (!is.null(X2)) {
+            mu_i <- X2 %*% rc_deviation
+            V_i <- self$delta[idx] + mu_i
+            V_max <- max(V_i)
+            log_w <- log_w + V_max + log(sum(exp(V_i - V_max)))
+          }
+        }
+        log_weights[i] <- log_w
+      }
+
+      # Normalize weights
+      log_weights <- log_weights - max(log_weights)
+      weights <- exp(log_weights)
+      weights <- weights / sum(weights)
+
+      # Build agent data for all markets
+      total_I <- n_draws * self$problem$T
+      all_nodes <- matrix(0, total_I, K2)
+      all_weights <- numeric(total_I)
+      all_market_ids <- character(total_I)
+
+      for (i in seq_along(self$problem$unique_market_ids)) {
+        idx <- ((i - 1) * n_draws + 1):(i * n_draws)
+        all_nodes[idx, ] <- nodes
+        all_weights[idx] <- weights
+        all_market_ids[idx] <- rep(self$problem$unique_market_ids[i], n_draws)
+      }
+
+      agent_data <- data.frame(
+        market_ids = all_market_ids,
+        weights = all_weights,
+        stringsAsFactors = FALSE
+      )
+      for (k in seq_len(K2)) {
+        agent_data[[paste0("nodes", k - 1)]] <- all_nodes[, k]
+      }
+
+      problem_ref <- self$problem
+
+      to_problem <- function() {
+        blp_problem(
+          product_formulations = problem_ref$product_formulations,
+          product_data = problem_ref$products$original_data,
+          agent_data = agent_data,
+          rc_types = problem_ref$rc_types,
+          costs_type = problem_ref$costs_type
+        )
+      }
+
+      list(
+        agent_data = agent_data,
+        nodes = nodes,
+        weights = weights,
+        effective_sample_size = 1 / sum(weights^2),
+        to_problem = to_problem
+      )
+    },
+
     #' @description Extract sigma squared (Sigma %*% Sigma')
     #' @return K2 x K2 covariance matrix
     #
@@ -614,6 +1024,37 @@ BLPResults <- R6::R6Class("BLPResults",
     compute_market_diversion = function(market_id) {
       mkt_data <- private$build_market_(market_id)
       mkt_data$market$compute_diversion_ratios(mkt_data$prob)
+    },
+
+    compute_market_lr_diversion = function(market_id) {
+      mkt_data <- private$build_market_(market_id)
+      P <- if (is.list(mkt_data$prob)) mkt_data$prob$probabilities else mkt_data$prob
+      w <- mkt_data$agents$weights
+      s <- mkt_data$market$compute_shares(P, w)
+      J <- mkt_data$market$J
+
+      alpha <- mkt_data$market$.__enclos_env__$private$get_alpha()
+
+      # ds/dp matrix
+      v <- w * alpha
+      Pv <- sweep(P, 2, v, "*")
+      A <- rowSums(Pv)
+      B <- tcrossprod(Pv, P)
+      dsdp <- diag(A, nrow = J) - B
+
+      # Passthrough dp/dc
+      ownership <- mkt_data$products$ownership
+      Omega <- ownership * dsdp
+      dFdp <- diag(1, J) + Omega
+      passthrough <- approximately_solve(dFdp, diag(1, J))
+
+      # ds/dc = ds/dp * dp/dc
+      dsdc <- dsdp %*% passthrough
+
+      # Long-run diversion: D_LR(j->k) = -(ds_k/dc_j) / (ds_j/dc_j)
+      D <- -t(dsdc) / diag(dsdc)
+      diag(D) <- 0
+      D
     }
   )
 )

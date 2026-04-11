@@ -65,6 +65,7 @@ BLPProblem <- R6::R6Class("BLPProblem",
                      fp_type = "safe_linear",
                      W_type = "robust", se_type = "robust",
                      initial_W = NULL,
+                     initial_update = FALSE,
                      scale_objective = TRUE,
                      center_moments = TRUE,
                      delta_behavior = "first",
@@ -153,6 +154,39 @@ BLPProblem <- R6::R6Class("BLPProblem",
       last_delta <- delta
       last_objective <- Inf
       step_results <- list()
+
+      # Initial update: evaluate at starting values to get delta and residuals,
+      # then update the weighting matrix before the first GMM step. This is
+      # important when using micro moments or when the initial W = (Z'Z/N)^{-1}
+      # is a poor approximation (pyblp: initial_update=True).
+      if (initial_update) {
+        rblp_message("\n--- Initial Update ---")
+        init_progress <- private$compute_progress(
+          theta, params, last_delta, W,
+          iteration, fp_type, scale_objective, center_moments,
+          micro_moments, error_behavior, error_punishment, processes
+        )
+        if (!is.null(init_progress$delta)) last_delta <- init_progress$delta
+
+        # Update W from initial residuals
+        S_init <- compute_gmm_moment_covariances(
+          init_progress$u_list, init_progress$Z_list,
+          type = W_type,
+          clustering_ids = self$products$clustering_ids
+        )
+        if (!is.null(micro_moments) && n_micro > 0) {
+          total_agg <- nrow(S_init)
+          n_total <- total_agg + n_micro
+          S_new <- matrix(0, n_total, n_total)
+          S_new[seq_len(total_agg), seq_len(total_agg)] <- S_init
+          for (mm in seq_len(n_micro)) {
+            S_new[total_agg + mm, total_agg + mm] <- 1 / self$N
+          }
+          S_init <- S_new
+        }
+        W <- compute_gmm_weights(S_init)
+        rblp_message(sprintf("Initial update: objective = %.8e", init_progress$objective))
+      }
 
       for (step in seq_len(n_steps)) {
         rblp_message(sprintf("\n--- GMM Step %d/%d ---", step, n_steps))
@@ -543,8 +577,36 @@ BLPProblem <- R6::R6Class("BLPProblem",
         G <- do.call(rbind, G_parts)
 
         if (!is.null(micro_moments) && length(micro_moments) > 0) {
-          # Micro moment gradient placeholder (zero for now)
-          G_micro <- matrix(0, length(micro_moments), params$n_free())
+          # Micro moment Jacobian: d(g_micro)/d(theta) via finite differences.
+          # Each micro moment g_m = f_m(theta) - target_m depends on theta
+          # through the choice probabilities. The analytic derivative is complex
+          # (requiring derivatives of conditional expectations), so we use
+          # central finite differences as in pyblp's default implementation.
+          eps_fd <- getOption("rblp.finite_differences_epsilon",
+                              sqrt(.Machine$double.eps))
+          n_micro <- length(micro_moments)
+          n_theta <- params$n_free()
+          G_micro <- matrix(0, n_micro, n_theta)
+
+          for (k in seq_len(n_theta)) {
+            theta_plus <- theta
+            theta_minus <- theta
+            theta_plus[k] <- theta_plus[k] + eps_fd
+            theta_minus[k] <- theta_minus[k] - eps_fd
+
+            exp_plus <- params$expand(theta_plus)
+            exp_minus <- params$expand(theta_minus)
+
+            for (m in seq_len(n_micro)) {
+              val_plus <- micro_moments[[m]]$compute_simulated_value(
+                self, delta_new, exp_plus$sigma, exp_plus$pi, exp_plus$rho
+              )
+              val_minus <- micro_moments[[m]]$compute_simulated_value(
+                self, delta_new, exp_minus$sigma, exp_minus$pi, exp_minus$rho
+              )
+              G_micro[m, k] <- (val_plus - val_minus) / (2 * eps_fd)
+            }
+          }
           G <- rbind(G, G_micro)
         }
 
@@ -583,6 +645,20 @@ BLPProblem <- R6::R6Class("BLPProblem",
         type = se_type,
         clustering_ids = self$products$clustering_ids
       )
+
+      # If micro moments are present, extend S to include micro blocks.
+      # The micro moment covariance block is diagonal with entries 1/n_obs.
+      n_S <- nrow(S)
+      n_W <- nrow(W)
+      if (n_W > n_S) {
+        n_micro <- n_W - n_S
+        S_ext <- matrix(0, n_W, n_W)
+        S_ext[seq_len(n_S), seq_len(n_S)] <- S
+        for (mm in seq_len(n_micro)) {
+          S_ext[n_S + mm, n_S + mm] <- 1 / N
+        }
+        S <- S_ext
+      }
 
       # GMM sandwich covariance for nonlinear parameters theta:
       # V(theta) = (1/N) * (G'WG)^{-1} G'W S W'G (G'WG)^{-1}.
