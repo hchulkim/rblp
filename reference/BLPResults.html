@@ -20,6 +20,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><a class="dropdown-item" href="../articles/data-preparation.html">Preparing Data for rblp</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
     <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
@@ -31,6 +32,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
     <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
     <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
+    <li><a class="dropdown-item" href="../articles/baby-blp-replication.html">Replicating baby_BLP: OTC Drug Demand</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -161,6 +163,14 @@
 <li><p><a href="#method-BLPResults-compute_merger"><code>BLPResults$compute_merger()</code></a></p></li>
 <li><p><a href="#method-BLPResults-run_hansen_test"><code>BLPResults$run_hansen_test()</code></a></p></li>
 <li><p><a href="#method-BLPResults-run_wald_test"><code>BLPResults$run_wald_test()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_aggregate_elasticities"><code>BLPResults$compute_aggregate_elasticities()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_passthrough"><code>BLPResults$compute_passthrough()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_long_run_diversion_ratios"><code>BLPResults$compute_long_run_diversion_ratios()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_shares"><code>BLPResults$compute_shares()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_profits"><code>BLPResults$compute_profits()</code></a></p></li>
+<li><p><a href="#method-BLPResults-compute_optimal_instruments"><code>BLPResults$compute_optimal_instruments()</code></a></p></li>
+<li><p><a href="#method-BLPResults-bootstrap"><code>BLPResults$bootstrap()</code></a></p></li>
+<li><p><a href="#method-BLPResults-importance_sampling"><code>BLPResults$importance_sampling()</code></a></p></li>
 <li><p><a href="#method-BLPResults-sigma_squared"><code>BLPResults$sigma_squared()</code></a></p></li>
 <li><p><a href="#method-BLPResults-summary_table"><code>BLPResults$summary_table()</code></a></p></li>
 <li><p><a href="#method-BLPResults-print"><code>BLPResults$print()</code></a></p></li>
@@ -352,34 +362,202 @@
 <p>List with statistic, df, p_value</p>
 </div>
 
+</div><p></p><hr><a id="method-BLPResults-compute_aggregate_elasticities"></a><div class="section">
+<h3 id="method-compute-aggregate-elasticities-">Method <code>compute_aggregate_elasticities()</code><a class="anchor" aria-label="anchor" href="#method-compute-aggregate-elasticities-"></a></h3>
+<p>Compute aggregate elasticities per market</p><div class="section">
+<h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_aggregate_elasticities</span><span class="op">(</span>factor <span class="op">=</span> <span class="fl">0.01</span>, market_id <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>factor</code></dt>
+<dd><p>Percentage price increase (default 0.01 = 1%)</p></dd>
+
+
+<dt><code>market_id</code></dt>
+<dd><p>Optional market identifier (NULL = all markets)</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-9">Returns<a class="anchor" aria-label="anchor" href="#returns-9"></a></h4>
+<p>Named numeric vector of aggregate elasticities per market</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-compute_passthrough"></a><div class="section">
+<h3 id="method-compute-passthrough-">Method <code>compute_passthrough()</code><a class="anchor" aria-label="anchor" href="#method-compute-passthrough-"></a></h3>
+<p>Compute cost-to-price passthrough matrix</p><div class="section">
+<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_passthrough</span><span class="op">(</span><span class="va">market_id</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>market_id</code></dt>
+<dd><p>Market identifier</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-10">Returns<a class="anchor" aria-label="anchor" href="#returns-10"></a></h4>
+<p>J x J passthrough matrix dp/dc</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-compute_long_run_diversion_ratios"></a><div class="section">
+<h3 id="method-compute-long-run-diversion-ratios-">Method <code>compute_long_run_diversion_ratios()</code><a class="anchor" aria-label="anchor" href="#method-compute-long-run-diversion-ratios-"></a></h3>
+<p>Compute long-run diversion ratios</p><div class="section">
+<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_long_run_diversion_ratios</span><span class="op">(</span>market_id <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>market_id</code></dt>
+<dd><p>Market identifier (NULL = all markets)</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-11">Returns<a class="anchor" aria-label="anchor" href="#returns-11"></a></h4>
+<p>J x J diversion matrix (or list of matrices)</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-compute_shares"></a><div class="section">
+<h3 id="method-compute-shares-">Method <code>compute_shares()</code><a class="anchor" aria-label="anchor" href="#method-compute-shares-"></a></h3>
+<p>Compute predicted market shares at estimated parameters</p><div class="section">
+<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_shares</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="returns-12">Returns<a class="anchor" aria-label="anchor" href="#returns-12"></a></h4>
+<p>Numeric vector of predicted shares (length N)</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-compute_profits"></a><div class="section">
+<h3 id="method-compute-profits-">Method <code>compute_profits()</code><a class="anchor" aria-label="anchor" href="#method-compute-profits-"></a></h3>
+<p>Compute per-product profits (p - c) * s</p><div class="section">
+<h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_profits</span><span class="op">(</span>costs <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-7">Arguments<a class="anchor" aria-label="anchor" href="#arguments-7"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>costs</code></dt>
+<dd><p>Optional pre-computed costs (computed if NULL)</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-13">Returns<a class="anchor" aria-label="anchor" href="#returns-13"></a></h4>
+<p>Numeric vector of profits (length N)</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-compute_optimal_instruments"></a><div class="section">
+<h3 id="method-compute-optimal-instruments-">Method <code>compute_optimal_instruments()</code><a class="anchor" aria-label="anchor" href="#method-compute-optimal-instruments-"></a></h3>
+<p>Compute optimal instruments (BLP 1999, Chamberlain 1987)</p><div class="section">
+<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">compute_optimal_instruments</span><span class="op">(</span>method <span class="op">=</span> <span class="st">"approximate"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-8">Arguments<a class="anchor" aria-label="anchor" href="#arguments-8"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>method</code></dt>
+<dd><p>"approximate" (default) or "exact"</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-14">Returns<a class="anchor" aria-label="anchor" href="#returns-14"></a></h4>
+<p>List with optimal_instruments (matrix) and to_problem() function</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-bootstrap"></a><div class="section">
+<h3 id="method-bootstrap-">Method <code>bootstrap()</code><a class="anchor" aria-label="anchor" href="#method-bootstrap-"></a></h3>
+<p>Parametric bootstrap for inference on post-estimation quantities</p><div class="section">
+<h4 id="usage-16">Usage<a class="anchor" aria-label="anchor" href="#usage-16"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">bootstrap</span><span class="op">(</span>draws <span class="op">=</span> <span class="fl">100L</span>, seed <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-9">Arguments<a class="anchor" aria-label="anchor" href="#arguments-9"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>draws</code></dt>
+<dd><p>Number of bootstrap draws</p></dd>
+
+
+<dt><code>seed</code></dt>
+<dd><p>Random seed</p></dd>
+
+
+<dt><code>...</code></dt>
+<dd><p>Additional arguments passed to solve()</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-15">Returns<a class="anchor" aria-label="anchor" href="#returns-15"></a></h4>
+<p>List of BLPResults objects (one per draw)</p>
+</div>
+
+</div><p></p><hr><a id="method-BLPResults-importance_sampling"></a><div class="section">
+<h3 id="method-importance-sampling-">Method <code>importance_sampling()</code><a class="anchor" aria-label="anchor" href="#method-importance-sampling-"></a></h3>
+<p>Construct importance sampling weights</p><div class="section">
+<h4 id="usage-17">Usage<a class="anchor" aria-label="anchor" href="#usage-17"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">importance_sampling</span><span class="op">(</span>n_draws <span class="op">=</span> <span class="fl">500L</span>, seed <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-10">Arguments<a class="anchor" aria-label="anchor" href="#arguments-10"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>n_draws</code></dt>
+<dd><p>Number of importance sampling draws</p></dd>
+
+
+<dt><code>seed</code></dt>
+<dd><p>Random seed</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-16">Returns<a class="anchor" aria-label="anchor" href="#returns-16"></a></h4>
+<p>List with new agent_data and to_problem() function</p>
+</div>
+
 </div><p></p><hr><a id="method-BLPResults-sigma_squared"></a><div class="section">
 <h3 id="method-sigma-squared-">Method <code>sigma_squared()</code><a class="anchor" aria-label="anchor" href="#method-sigma-squared-"></a></h3>
 <p>Extract sigma squared (Sigma %*% Sigma')</p><div class="section">
-<h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
+<h4 id="usage-18">Usage<a class="anchor" aria-label="anchor" href="#usage-18"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">sigma_squared</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="returns-9">Returns<a class="anchor" aria-label="anchor" href="#returns-9"></a></h4>
+<h4 id="returns-17">Returns<a class="anchor" aria-label="anchor" href="#returns-17"></a></h4>
 <p>K2 x K2 covariance matrix</p>
 </div>
 
 </div><p></p><hr><a id="method-BLPResults-summary_table"></a><div class="section">
 <h3 id="method-summary-table-">Method <code>summary_table()</code><a class="anchor" aria-label="anchor" href="#method-summary-table-"></a></h3>
 <p>Get a summary table of all estimated parameters</p><div class="section">
-<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
+<h4 id="usage-19">Usage<a class="anchor" aria-label="anchor" href="#usage-19"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">summary_table</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="returns-10">Returns<a class="anchor" aria-label="anchor" href="#returns-10"></a></h4>
+<h4 id="returns-18">Returns<a class="anchor" aria-label="anchor" href="#returns-18"></a></h4>
 <p>Data frame with estimates and standard errors</p>
 </div>
 
 </div><p></p><hr><a id="method-BLPResults-print"></a><div class="section">
 <h3 id="method-print-">Method <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code><a class="anchor" aria-label="anchor" href="#method-print-"></a></h3>
 <p>Print estimation results</p><div class="section">
-<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
+<h4 id="usage-20">Usage<a class="anchor" aria-label="anchor" href="#usage-20"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">print</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -387,12 +565,12 @@
 </div><p></p><hr><a id="method-BLPResults-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
+<h4 id="usage-21">Usage<a class="anchor" aria-label="anchor" href="#usage-21"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">BLPResults</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
+<h4 id="arguments-11">Arguments<a class="anchor" aria-label="anchor" href="#arguments-11"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 

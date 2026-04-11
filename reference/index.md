@@ -110,6 +110,8 @@ benchmarks in the differentiated products literature.
   : Mixtape Sessions Cereal Product Data
 - [`mixtape_demographics`](https://hchulkim.github.io/rblp/reference/mixtape_demographics.md)
   : Mixtape Sessions Cereal Demographic Data
+- [`load_otc_products()`](https://hchulkim.github.io/rblp/reference/load_otc_products.md)
+  : OTC Drug Product Data (baby_BLP)
 
 ## Options
 

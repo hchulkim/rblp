@@ -22,6 +22,7 @@ Inherits from BLPEconomy and adds the solve() interface."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/rblp-tutorial.html">Getting Started with rblp</a></li>
+    <li><a class="dropdown-item" href="../articles/data-preparation.html">Preparing Data for rblp</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Model Estimation</h6></li>
     <li><a class="dropdown-item" href="../articles/logit-nested-logit.html">Logit and Nested Logit Models</a></li>
@@ -33,6 +34,7 @@ Inherits from BLPEconomy and adds the solve() interface."></head><body>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials &amp; Exercises</h6></li>
     <li><a class="dropdown-item" href="../articles/mixtape-exercises.html">Mixtape Demand Estimation Exercises</a></li>
     <li><a class="dropdown-item" href="../articles/simulation-monte-carlo.html">Simulation and Monte Carlo</a></li>
+    <li><a class="dropdown-item" href="../articles/baby-blp-replication.html">Replicating baby_BLP: OTC Drug Demand</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -152,6 +154,7 @@ and optionally firm_ids, nesting_ids, demand_instruments*, supply_instruments*</
 <span>  W_type <span class="op">=</span> <span class="st">"robust"</span>,</span>
 <span>  se_type <span class="op">=</span> <span class="st">"robust"</span>,</span>
 <span>  initial_W <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  initial_update <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  scale_objective <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  center_moments <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  delta_behavior <span class="op">=</span> <span class="st">"first"</span>,</span>

@@ -7,6 +7,8 @@ estimation, random coefficients, simulation, and merger analysis.
 
 - [Getting Started with
   rblp](https://hchulkim.github.io/rblp/articles/rblp-tutorial.md):
+- [Preparing Data for
+  rblp](https://hchulkim.github.io/rblp/articles/data-preparation.md):
 
 ### Model Estimation
 
@@ -35,3 +37,5 @@ Sessions exercises and Monte Carlo simulation studies.
   Exercises](https://hchulkim.github.io/rblp/articles/mixtape-exercises.md):
 - [Simulation and Monte
   Carlo](https://hchulkim.github.io/rblp/articles/simulation-monte-carlo.md):
+- [Replicating baby_BLP: OTC Drug Demand
+  Estimation](https://hchulkim.github.io/rblp/articles/baby-blp-replication.md):

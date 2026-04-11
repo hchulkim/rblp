@@ -2,6 +2,8 @@
 <url><loc>https://hchulkim.github.io/rblp/404.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/CLAUDE.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/LICENSE-text.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/baby-blp-replication.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/articles/data-preparation.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/articles/index.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/articles/logit-nested-logit.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/articles/mixtape-exercises.html</loc></url>
@@ -66,6 +68,7 @@
 <url><loc>https://hchulkim.github.io/rblp/reference/load_mixtape_products.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_nevo_agents.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/load_nevo_products.html</loc></url>
+<url><loc>https://hchulkim.github.io/rblp/reference/load_otc_products.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/log_safe.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/mat_vec.html</loc></url>
 <url><loc>https://hchulkim.github.io/rblp/reference/mat_vech.html</loc></url>

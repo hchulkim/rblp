@@ -116,6 +116,22 @@ Stores estimation results and provides post-estimation methods.
 
 - [`BLPResults$run_wald_test()`](#method-BLPResults-run_wald_test)
 
+- [`BLPResults$compute_aggregate_elasticities()`](#method-BLPResults-compute_aggregate_elasticities)
+
+- [`BLPResults$compute_passthrough()`](#method-BLPResults-compute_passthrough)
+
+- [`BLPResults$compute_long_run_diversion_ratios()`](#method-BLPResults-compute_long_run_diversion_ratios)
+
+- [`BLPResults$compute_shares()`](#method-BLPResults-compute_shares)
+
+- [`BLPResults$compute_profits()`](#method-BLPResults-compute_profits)
+
+- [`BLPResults$compute_optimal_instruments()`](#method-BLPResults-compute_optimal_instruments)
+
+- [`BLPResults$bootstrap()`](#method-BLPResults-bootstrap)
+
+- [`BLPResults$importance_sampling()`](#method-BLPResults-importance_sampling)
+
 - [`BLPResults$sigma_squared()`](#method-BLPResults-sigma_squared)
 
 - [`BLPResults$summary_table()`](#method-BLPResults-summary_table)
@@ -322,6 +338,176 @@ Run Wald test for parameter restrictions
 #### Returns
 
 List with statistic, df, p_value
+
+------------------------------------------------------------------------
+
+### Method `compute_aggregate_elasticities()`
+
+Compute aggregate elasticities per market
+
+#### Usage
+
+    BLPResults$compute_aggregate_elasticities(factor = 0.01, market_id = NULL)
+
+#### Arguments
+
+- `factor`:
+
+  Percentage price increase (default 0.01 = 1%)
+
+- `market_id`:
+
+  Optional market identifier (NULL = all markets)
+
+#### Returns
+
+Named numeric vector of aggregate elasticities per market
+
+------------------------------------------------------------------------
+
+### Method `compute_passthrough()`
+
+Compute cost-to-price passthrough matrix
+
+#### Usage
+
+    BLPResults$compute_passthrough(market_id)
+
+#### Arguments
+
+- `market_id`:
+
+  Market identifier
+
+#### Returns
+
+J x J passthrough matrix dp/dc
+
+------------------------------------------------------------------------
+
+### Method `compute_long_run_diversion_ratios()`
+
+Compute long-run diversion ratios
+
+#### Usage
+
+    BLPResults$compute_long_run_diversion_ratios(market_id = NULL)
+
+#### Arguments
+
+- `market_id`:
+
+  Market identifier (NULL = all markets)
+
+#### Returns
+
+J x J diversion matrix (or list of matrices)
+
+------------------------------------------------------------------------
+
+### Method `compute_shares()`
+
+Compute predicted market shares at estimated parameters
+
+#### Usage
+
+    BLPResults$compute_shares()
+
+#### Returns
+
+Numeric vector of predicted shares (length N)
+
+------------------------------------------------------------------------
+
+### Method `compute_profits()`
+
+Compute per-product profits (p - c) \* s
+
+#### Usage
+
+    BLPResults$compute_profits(costs = NULL)
+
+#### Arguments
+
+- `costs`:
+
+  Optional pre-computed costs (computed if NULL)
+
+#### Returns
+
+Numeric vector of profits (length N)
+
+------------------------------------------------------------------------
+
+### Method `compute_optimal_instruments()`
+
+Compute optimal instruments (BLP 1999, Chamberlain 1987)
+
+#### Usage
+
+    BLPResults$compute_optimal_instruments(method = "approximate")
+
+#### Arguments
+
+- `method`:
+
+  "approximate" (default) or "exact"
+
+#### Returns
+
+List with optimal_instruments (matrix) and to_problem() function
+
+------------------------------------------------------------------------
+
+### Method `bootstrap()`
+
+Parametric bootstrap for inference on post-estimation quantities
+
+#### Usage
+
+    BLPResults$bootstrap(draws = 100L, seed = NULL, ...)
+
+#### Arguments
+
+- `draws`:
+
+  Number of bootstrap draws
+
+- `seed`:
+
+  Random seed
+
+- `...`:
+
+  Additional arguments passed to solve()
+
+#### Returns
+
+List of BLPResults objects (one per draw)
+
+------------------------------------------------------------------------
+
+### Method `importance_sampling()`
+
+Construct importance sampling weights
+
+#### Usage
+
+    BLPResults$importance_sampling(n_draws = 500L, seed = NULL)
+
+#### Arguments
+
+- `n_draws`:
+
+  Number of importance sampling draws
+
+- `seed`:
+
+  Random seed
+
+#### Returns
+
+List with new agent_data and to_problem() function
 
 ------------------------------------------------------------------------
 

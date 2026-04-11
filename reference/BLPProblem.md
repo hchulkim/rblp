@@ -110,6 +110,7 @@ Solve the BLP estimation problem
       W_type = "robust",
       se_type = "robust",
       initial_W = NULL,
+      initial_update = FALSE,
       scale_objective = TRUE,
       center_moments = TRUE,
       delta_behavior = "first",
