@@ -24,6 +24,8 @@ navbar:
         - text: "Getting Started"
         - text: "Getting Started with rblp"
           href: articles/rblp-tutorial.html
+        - text: "Preparing Data for rblp"
+          href: articles/data-preparation.html
         - text: "-------"
         - text: "Model Estimation"
         - text: "Logit and Nested Logit Models"
@@ -51,6 +53,7 @@ articles:
     navbar: ~
     contents:
       - rblp-tutorial
+      - data-preparation
   - title: "Model Estimation"
     desc: >
       Detailed guides on estimating demand models, from the plain logit
