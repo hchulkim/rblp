@@ -68,6 +68,14 @@ Stores estimation results and provides post-estimation methods.
 \item \href{#method-BLPResults-compute_merger}{\code{BLPResults$compute_merger()}}
 \item \href{#method-BLPResults-run_hansen_test}{\code{BLPResults$run_hansen_test()}}
 \item \href{#method-BLPResults-run_wald_test}{\code{BLPResults$run_wald_test()}}
+\item \href{#method-BLPResults-compute_aggregate_elasticities}{\code{BLPResults$compute_aggregate_elasticities()}}
+\item \href{#method-BLPResults-compute_passthrough}{\code{BLPResults$compute_passthrough()}}
+\item \href{#method-BLPResults-compute_long_run_diversion_ratios}{\code{BLPResults$compute_long_run_diversion_ratios()}}
+\item \href{#method-BLPResults-compute_shares}{\code{BLPResults$compute_shares()}}
+\item \href{#method-BLPResults-compute_profits}{\code{BLPResults$compute_profits()}}
+\item \href{#method-BLPResults-compute_optimal_instruments}{\code{BLPResults$compute_optimal_instruments()}}
+\item \href{#method-BLPResults-bootstrap}{\code{BLPResults$bootstrap()}}
+\item \href{#method-BLPResults-importance_sampling}{\code{BLPResults$importance_sampling()}}
 \item \href{#method-BLPResults-sigma_squared}{\code{BLPResults$sigma_squared()}}
 \item \href{#method-BLPResults-summary_table}{\code{BLPResults$summary_table()}}
 \item \href{#method-BLPResults-print}{\code{BLPResults$print()}}
@@ -260,6 +268,167 @@ Run Wald test for parameter restrictions
 }
 \subsection{Returns}{
 List with statistic, df, p_value
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_aggregate_elasticities"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_aggregate_elasticities}{}}}
+\subsection{Method \code{compute_aggregate_elasticities()}}{
+Compute aggregate elasticities per market
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_aggregate_elasticities(factor = 0.01, market_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{factor}}{Percentage price increase (default 0.01 = 1\%)}
+
+\item{\code{market_id}}{Optional market identifier (NULL = all markets)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Named numeric vector of aggregate elasticities per market
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_passthrough"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_passthrough}{}}}
+\subsection{Method \code{compute_passthrough()}}{
+Compute cost-to-price passthrough matrix
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_passthrough(market_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{market_id}}{Market identifier}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+J x J passthrough matrix dp/dc
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_long_run_diversion_ratios"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_long_run_diversion_ratios}{}}}
+\subsection{Method \code{compute_long_run_diversion_ratios()}}{
+Compute long-run diversion ratios
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_long_run_diversion_ratios(market_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{market_id}}{Market identifier (NULL = all markets)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+J x J diversion matrix (or list of matrices)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_shares"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_shares}{}}}
+\subsection{Method \code{compute_shares()}}{
+Compute predicted market shares at estimated parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_shares()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Numeric vector of predicted shares (length N)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_profits"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_profits}{}}}
+\subsection{Method \code{compute_profits()}}{
+Compute per-product profits (p - c) * s
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_profits(costs = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{costs}}{Optional pre-computed costs (computed if NULL)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Numeric vector of profits (length N)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-compute_optimal_instruments"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-compute_optimal_instruments}{}}}
+\subsection{Method \code{compute_optimal_instruments()}}{
+Compute optimal instruments (BLP 1999, Chamberlain 1987)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$compute_optimal_instruments(method = "approximate")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{method}}{"approximate" (default) or "exact"}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List with optimal_instruments (matrix) and to_problem() function
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-bootstrap"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-bootstrap}{}}}
+\subsection{Method \code{bootstrap()}}{
+Parametric bootstrap for inference on post-estimation quantities
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$bootstrap(draws = 100L, seed = NULL, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{draws}}{Number of bootstrap draws}
+
+\item{\code{seed}}{Random seed}
+
+\item{\code{...}}{Additional arguments passed to solve()}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List of BLPResults objects (one per draw)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BLPResults-importance_sampling"></a>}}
+\if{latex}{\out{\hypertarget{method-BLPResults-importance_sampling}{}}}
+\subsection{Method \code{importance_sampling()}}{
+Construct importance sampling weights
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BLPResults$importance_sampling(n_draws = 500L, seed = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{n_draws}}{Number of importance sampling draws}
+
+\item{\code{seed}}{Random seed}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List with new agent_data and to_problem() function
 }
 }
 \if{html}{\out{<hr>}}
