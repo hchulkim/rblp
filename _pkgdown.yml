@@ -46,6 +46,8 @@ navbar:
           href: articles/simulation-monte-carlo.html
         - text: "Replicating baby_BLP: OTC Drug Demand"
           href: articles/baby-blp-replication.html
+        - text: "Monte Carlo Validation"
+          href: articles/monte-carlo-validation.html
 
 articles:
   - title: "Getting Started"
@@ -81,6 +83,7 @@ articles:
       - mixtape-exercises
       - simulation-monte-carlo
       - baby-blp-replication
+      - monte-carlo-validation
 
 reference:
   - title: "Problem Setup"
