@@ -27,6 +27,8 @@ surplus, markups, diversion ratios, and simulate the effects of mergers.
 
 - [Post-Estimation and Merger
   Simulation](https://hchulkim.github.io/rblp/articles/post-estimation-mergers.md):
+- [Advanced Features: Optimal Instruments, Bootstrap, and
+  More](https://hchulkim.github.io/rblp/articles/advanced-features.md):
 
 ### Tutorials & Exercises
 
