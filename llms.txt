@@ -371,3 +371,5 @@ Sessions exercises and Monte Carlo simulation studies.
   Carlo](https://hchulkim.github.io/rblp/articles/simulation-monte-carlo.md):
 - [Replicating baby_BLP: OTC Drug Demand
   Estimation](https://hchulkim.github.io/rblp/articles/baby-blp-replication.md):
+- [Monte Carlo Validation of
+  rblp](https://hchulkim.github.io/rblp/articles/monte-carlo-validation.md):
