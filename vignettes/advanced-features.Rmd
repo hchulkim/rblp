@@ -1,0 +1,249 @@
+---
+title: "Advanced Features: Optimal Instruments, Bootstrap, and More"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Features: Optimal Instruments, Bootstrap, and More}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(rblp.verbose = FALSE)
+```
+
+## Overview
+
+This vignette demonstrates advanced `rblp` features that go beyond basic
+estimation: aggregate elasticities, cost passthrough, long-run diversion,
+optimal instruments, parametric bootstrap, and importance sampling. These
+tools are essential for policy analysis and robustness checks.
+
+## Setup: Estimate a Baseline Model
+
+```{r setup-model, eval=TRUE}
+library(rblp)
+
+products <- load_nevo_products()
+f1 <- blp_formulation(~ prices + sugar + mushy)
+problem <- blp_problem(list(f1), products)
+results <- problem$solve(method = "2s")
+results$summary_table()[, c("parameter", "estimate", "se")]
+```
+
+## Aggregate Elasticities
+
+The aggregate elasticity measures the percentage change in **total inside
+market share** from a uniform 1% increase in all prices. Unlike the $J
+\times J$ product-level elasticity matrix, this is a scalar per market ---
+useful for quick summaries.
+
+```{r aggregate-elasticity, eval=TRUE}
+ae <- results$compute_aggregate_elasticities()
+
+cat(sprintf("Aggregate elasticities across %d markets:\n", length(ae)))
+cat(sprintf("  Mean: %.4f\n", mean(ae)))
+cat(sprintf("  Range: [%.4f, %.4f]\n", min(ae), max(ae)))
+```
+
+All aggregate elasticities are negative: when all inside goods become
+more expensive, consumers substitute toward the outside option.
+
+For a specific market:
+
+```{r aggregate-single, eval=TRUE}
+ae_m1 <- results$compute_aggregate_elasticities(
+  market_id = problem$unique_market_ids[1]
+)
+cat(sprintf("Market '%s' aggregate elasticity: %.4f\n",
+            problem$unique_market_ids[1], ae_m1))
+```
+
+## Cost-to-Price Passthrough
+
+The passthrough matrix $dp/dc$ measures how a \$1 increase in the
+marginal cost of product $k$ changes the equilibrium price of product
+$j$. Under Bertrand-Nash pricing, this is derived from the implicit
+function theorem applied to the system of first-order conditions.
+
+```{r passthrough, eval=TRUE}
+t1 <- problem$unique_market_ids[1]
+PT <- results$compute_passthrough(t1)
+
+cat(sprintf("Passthrough matrix: %d x %d\n", nrow(PT), ncol(PT)))
+cat("\nOwn-cost passthrough (diagonal, first 5 products):\n")
+cat(sprintf("  %s\n", paste(round(diag(PT)[1:5], 4), collapse = ", ")))
+```
+
+Under perfect competition, own-cost passthrough equals 1 (costs are
+fully passed through to prices). Under oligopoly, it is typically less
+than 1 --- firms absorb some of the cost increase.
+
+## Long-Run Diversion Ratios
+
+Standard (short-run) diversion ratios hold rivals' prices fixed. Long-run
+diversion accounts for equilibrium price adjustments: when product $j$'s
+cost rises and its price increases, rivals also adjust their prices. This
+is more relevant for merger analysis.
+
+```{r long-run-diversion, eval=TRUE}
+D_sr <- results$compute_diversion_ratios(t1)
+D_lr <- results$compute_long_run_diversion_ratios(t1)
+
+cat("Short-run vs Long-run diversion (product 1 -> products 2-5):\n")
+for (k in 2:5) {
+  cat(sprintf("  1 -> %d: SR = %.4f, LR = %.4f\n",
+              k, D_sr[k, 1], D_lr[k, 1]))
+}
+```
+
+Long-run diversion is typically larger because rivals raise prices when
+the focal product becomes more expensive, redirecting even more demand.
+
+## Predicted Shares and Profits
+
+```{r shares-profits, eval=TRUE}
+s_pred <- results$compute_shares()
+profits <- results$compute_profits()
+
+cat(sprintf("Predicted shares: range [%.6f, %.6f]\n", min(s_pred), max(s_pred)))
+cat(sprintf("Correlation with observed: %.6f\n",
+            cor(s_pred, problem$products$shares)))
+cat(sprintf("Profits: range [%.6f, %.6f]\n", min(profits), max(profits)))
+```
+
+## Optimal Instruments
+
+Standard BLP instruments (sums of rival characteristics) may be weak.
+Optimal instruments (Chamberlain 1987, BLP 1999) project the Jacobian
+of the structural error onto the instrument space, yielding efficient
+GMM estimates.
+
+```{r optimal-instruments, eval=TRUE}
+oi <- results$compute_optimal_instruments()
+cat(sprintf("Optimal demand instruments: %d x %d\n",
+            nrow(oi$optimal_demand_instruments),
+            ncol(oi$optimal_demand_instruments)))
+
+# Re-estimate with optimal instruments
+prob_opt <- oi$to_problem()
+res_opt <- prob_opt$solve(method = "2s")
+
+# Compare SEs
+se_standard <- results$summary_table()$se
+se_optimal <- res_opt$summary_table()$se
+comp <- data.frame(
+  parameter = results$summary_table()$parameter,
+  SE_standard = round(se_standard, 4),
+  SE_optimal = round(se_optimal, 4),
+  ratio = round(se_optimal / se_standard, 4)
+)
+print(comp, row.names = FALSE)
+```
+
+## Parametric Bootstrap
+
+The parametric bootstrap provides standard errors for post-estimation
+quantities (elasticities, CS, merger effects) by resampling the
+structural errors and re-estimating:
+
+```{r bootstrap, eval=TRUE}
+# Use a simple simulation for speed
+id_data <- build_id_data(T = 10, J = 8, F = 2)
+set.seed(42)
+id_data$x <- runif(nrow(id_data))
+
+sim <- blp_simulation(list(blp_formulation(~ prices + x)), id_data,
+                      beta = c(0.5, -2.0, 0.8), xi_variance = 0.2, seed = 42)
+sim_res <- sim$replace_endogenous()
+sim_prob <- sim_res$to_problem()
+est <- sim_prob$solve(method = "1s")
+
+# 10 bootstrap draws (use more in practice)
+boot <- est$bootstrap(draws = 10, seed = 123, method = "1s")
+cat(sprintf("Successful bootstrap draws: %d\n", length(boot)))
+
+# Bootstrap distribution of price coefficient
+boot_prices <- sapply(boot, function(b) b$beta[2])
+cat(sprintf("Price coefficient:\n"))
+cat(sprintf("  Point estimate: %.4f\n", est$beta[2]))
+cat(sprintf("  Bootstrap mean: %.4f\n", mean(boot_prices)))
+cat(sprintf("  Bootstrap SD:   %.4f\n", sd(boot_prices)))
+cat(sprintf("  Bootstrap 95%% CI: [%.4f, %.4f]\n",
+            quantile(boot_prices, 0.025), quantile(boot_prices, 0.975)))
+```
+
+## Importance Sampling
+
+Importance sampling concentrates integration nodes in regions of high
+probability mass, improving accuracy with fewer nodes. This is useful
+for RC models where the mixing distribution has moved far from the
+standard normal.
+
+```{r importance-sampling, eval=TRUE}
+# RC model for importance sampling
+sim_rc <- blp_simulation(
+  list(blp_formulation(~ prices + x), blp_formulation(~ prices + x)),
+  id_data, beta = c(0.5, -2.0, 0.8), sigma = diag(c(0.3, 0.3, 0.3)),
+  integration = blp_integration("product", size = 3),
+  xi_variance = 0.2, seed = 42
+)
+sim_rc_res <- sim_rc$replace_endogenous()
+prob_rc <- sim_rc_res$to_problem()
+est_rc <- prob_rc$solve(sigma = diag(c(0.3, 0.3, 0.3)), method = "1s",
+  optimization = blp_optimization("l-bfgs-b", method_options = list(maxit = 50)))
+
+is_result <- est_rc$importance_sampling(n_draws = 100, seed = 42)
+cat(sprintf("Importance sampling:\n"))
+cat(sprintf("  Draws: %d\n", nrow(is_result$nodes)))
+cat(sprintf("  Effective sample size: %.1f (of %d)\n",
+            is_result$effective_sample_size, nrow(is_result$nodes)))
+
+# Re-estimate with importance-sampled nodes
+prob_is <- is_result$to_problem()
+cat(sprintf("  Problem with IS: I = %d agents\n", prob_is$I))
+```
+
+## Initial Update
+
+The `initial_update` option evaluates the model at starting parameter
+values and updates the weighting matrix before the first GMM step. This
+is especially useful when the initial $W = (Z'Z/N)^{-1}$ is a poor
+approximation:
+
+```{r initial-update, eval=TRUE}
+f1 <- blp_formulation(~ prices + sugar + mushy)
+prob <- blp_problem(list(f1), load_nevo_products())
+
+res_no_update <- prob$solve(method = "2s", initial_update = FALSE)
+res_with_update <- prob$solve(method = "2s", initial_update = TRUE)
+
+cat(sprintf("Without initial_update: obj = %.4f\n", res_no_update$objective))
+cat(sprintf("With initial_update:    obj = %.4f\n", res_with_update$objective))
+```
+
+## Summary of Available Methods
+
+| Method | Description |
+|--------|-------------|
+| `compute_elasticities()` | $J \times J$ price elasticity matrix |
+| `compute_aggregate_elasticities()` | Scalar per-market aggregate elasticity |
+| `compute_diversion_ratios()` | Short-run (fixed prices) diversion |
+| `compute_long_run_diversion_ratios()` | Long-run (equilibrium) diversion |
+| `compute_passthrough()` | $J \times J$ cost-to-price passthrough |
+| `compute_costs()` | Recover marginal costs from Bertrand FOCs |
+| `compute_markups()` | Lerner index $(p-c)/p$ |
+| `compute_shares()` | Predicted shares at estimated parameters |
+| `compute_profits()` | Per-product profits $(p-c) \cdot s$ |
+| `compute_consumer_surplus()` | Small-Rosen CS per market |
+| `compute_hhi()` | Herfindahl-Hirschman Index per market |
+| `compute_merger()` | Full merger simulation with new equilibrium |
+| `compute_optimal_instruments()` | Feasible efficient instruments |
+| `bootstrap()` | Parametric bootstrap for inference |
+| `importance_sampling()` | Improved integration nodes |
+| `run_hansen_test()` | Hansen J-test for overidentification |
+| `run_wald_test()` | Wald test for parameter restrictions |
+| `summary_table()` | Publication-ready parameter table |

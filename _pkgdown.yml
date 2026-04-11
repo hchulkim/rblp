@@ -36,6 +36,8 @@ navbar:
         - text: "Post-Estimation"
         - text: "Post-Estimation and Merger Simulation"
           href: articles/post-estimation-mergers.html
+        - text: "Advanced Features: Optimal Instruments, Bootstrap, and More"
+          href: articles/advanced-features.html
         - text: "-------"
         - text: "Tutorials & Exercises"
         - text: "Mixtape Demand Estimation Exercises"
@@ -69,6 +71,7 @@ articles:
     navbar: ~
     contents:
       - post-estimation-mergers
+      - advanced-features
   - title: "Tutorials & Exercises"
     desc: >
       Hands-on tutorials for learning BLP estimation, including Mixtape Sessions
