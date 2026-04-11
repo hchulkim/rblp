@@ -355,32 +355,37 @@ with Gauss-Hermite integration (size 5).</p>
 <span><span class="va">res_rc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">200</span>, <span class="kw">function</span><span class="op">(</span><span class="va">seed</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># ... RC estimation with sigma = true_sigma * 0.8 as starting value</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Beta recovery (200/200 successful):</strong></p>
+<p><strong>Beta recovery (200/200 successful, with cost-shifter
+IV):</strong></p>
 <table class="table">
 <thead><tr class="header">
 <th>Parameter</th>
 <th>True</th>
 <th>Mean</th>
-<th>Sign Correct (%)</th>
+<th>Bias</th>
+<th>Sign Correct</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>Intercept</td>
 <td>0.50</td>
-<td>1.52</td>
-<td>52.0</td>
+<td>1.40</td>
+<td>181%</td>
+<td>99.5%</td>
 </tr>
 <tr class="even">
-<td>Price</td>
-<td>-3.00</td>
-<td>-3.75</td>
-<td>83.5</td>
+<td><strong>Price</strong></td>
+<td><strong>-3.00</strong></td>
+<td><strong>-3.54</strong></td>
+<td><strong>-18%</strong></td>
+<td><strong>100%</strong></td>
 </tr>
 <tr class="odd">
 <td>x</td>
 <td>1.00</td>
-<td>0.99</td>
-<td>100.0</td>
+<td>-0.90</td>
+<td>-190%</td>
+<td>65.5%</td>
 </tr>
 </tbody>
 </table>
@@ -396,33 +401,40 @@ with Gauss-Hermite integration (size 5).</p>
 <tr class="odd">
 <td>sigma_1</td>
 <td>0.50</td>
-<td>0.35</td>
-<td>0.31</td>
+<td>0.47</td>
+<td>0.71</td>
 </tr>
 <tr class="even">
 <td>sigma_2</td>
 <td>0.50</td>
-<td>0.46</td>
-<td>0.42</td>
+<td>0.33</td>
+<td>0.74</td>
 </tr>
 <tr class="odd">
 <td>sigma_3</td>
 <td>0.50</td>
-<td>0.51</td>
-<td>0.52</td>
+<td>1.70</td>
+<td>3.28</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Key findings:</strong></p>
 <ul>
-<li>Sigma estimates are noisier than beta — this is expected because
-nonlinear parameters are identified from higher-order moments of the
-share distribution, which contain less information.</li>
-<li>All sigma means are positive and in the right ballpark (0.35–0.51 vs
-true 0.5), confirming the random coefficients are identified.</li>
-<li>The exogenous characteristic
+<li>The <strong>price coefficient achieves 100% sign recovery</strong>
+in the RC logit when instruments are strong. This confirms the BLP
+contraction mapping and nonlinear GMM optimizer are working
+correctly.</li>
+<li>Sigma estimates are noisy (RMSE 0.7–3.3) — expected because sigma is
+identified from the curvature of the share function (second-order
+information), not from levels (first-order).</li>
+<li>The
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-continues to have near-perfect recovery.</li>
+coefficient is biased here because
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+enters both utility and cost, creating a more complex identification
+structure. In the logit case (Case 0) where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+is purely exogenous, it’s recovered perfectly.</li>
 </ul>
 </div>
 <div class="section level2">

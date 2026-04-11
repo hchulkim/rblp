@@ -212,7 +212,7 @@ cat("=== rblp OLS Logit Results ===\n\n")
 print(ols_results)
 #> BLP Estimation Results
 #>   Method: 1S GMM
-#>   Objective: 8.637535e-24
+#>   Objective: 1.066520e-24
 #>   Optimization converged: TRUE
 #>   FP converged: TRUE (94 total iterations)
 #> 
@@ -253,7 +253,7 @@ cat("=== FE Logit Results (prices as own IV) ===\n\n")
 print(fe_results)
 #> BLP Estimation Results
 #>   Method: 1S GMM
-#>   Objective: 1.357330e-28
+#>   Objective: 2.282579e-28
 #>   Optimization converged: TRUE
 #>   FP converged: TRUE (664 total iterations)
 #> 
