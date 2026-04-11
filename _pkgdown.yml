@@ -40,6 +40,8 @@ navbar:
           href: articles/mixtape-exercises.html
         - text: "Simulation and Monte Carlo"
           href: articles/simulation-monte-carlo.html
+        - text: "Replicating baby_BLP: OTC Drug Demand"
+          href: articles/baby-blp-replication.html
 
 articles:
   - title: "Getting Started"
@@ -72,6 +74,7 @@ articles:
     contents:
       - mixtape-exercises
       - simulation-monte-carlo
+      - baby-blp-replication
 
 reference:
   - title: "Problem Setup"
@@ -141,6 +144,7 @@ reference:
       - prepare_mixtape_data
       - mixtape_products
       - mixtape_demographics
+      - load_otc_products
 
   - title: "Options"
     desc: "Package-wide configuration options."

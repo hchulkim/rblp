@@ -432,17 +432,26 @@ BLPProblem <- R6::R6Class("BLPProblem",
       delta_iv <- delta_new
       if (!is.null(private$absorb_groups_)) {
         grp <- private$absorb_groups_
-        gm <- tapply(delta_iv, grp, mean)
-        delta_iv <- as.numeric(delta_iv - gm[match(grp, names(gm))])
+        # Use pre-computed group indices for fast demeaning
+        grp_idx <- split(seq_len(N), grp)
+        grp_sizes <- lengths(grp_idx)
+
+        # Demean delta: subtract group mean
+        for (g in names(grp_idx)) {
+          idx_g <- grp_idx[[g]]
+          gm <- mean(delta_iv[idx_g])
+          delta_iv[idx_g] <- delta_iv[idx_g] - gm
+        }
 
         # The xi-Jacobian (d_xi/d_theta) must also be FWL-demeaned. Without this,
         # the gradient would be inconsistent with the demeaned moment conditions,
         # because the Jacobian feeds into G = Z' (d_xi/d_theta) / N which must
         # be computed in the same demeaned space as the moments g = Z' xi / N.
         if (!is.null(full_xi_jac)) {
-          for (j in seq_len(ncol(full_xi_jac))) {
-            gm_j <- tapply(full_xi_jac[, j], grp, mean)
-            full_xi_jac[, j] <- full_xi_jac[, j] - as.numeric(gm_j[match(grp, names(gm_j))])
+          for (g in names(grp_idx)) {
+            idx_g <- grp_idx[[g]]
+            gm_j <- colMeans(full_xi_jac[idx_g, , drop = FALSE])
+            full_xi_jac[idx_g, ] <- sweep(full_xi_jac[idx_g, , drop = FALSE], 2, gm_j)
           }
         }
       }
@@ -526,6 +535,10 @@ BLPProblem <- R6::R6Class("BLPProblem",
         G_parts <- list(crossprod(ZD, xi_jac_concentrated) / N)
         if (!is.null(omega_jac_concentrated)) {
           G_parts[[2]] <- crossprod(ZS, omega_jac_concentrated) / N
+        } else if (MS > 0) {
+          # Supply moments present but no supply Jacobian: add zero block
+          # so G dimensions match the full moment vector g = [g_demand; g_supply]
+          G_parts[[2]] <- matrix(0, MS, params$n_free())
         }
         G <- do.call(rbind, G_parts)
 

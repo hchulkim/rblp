@@ -1,6 +1,6 @@
 test_that("BLPParameters compress and expand sigma", {
   sigma <- matrix(c(1, 0.5, 0, 2), 2, 2)
-  params <- BLPParameters$new(sigma = sigma)
+  params <- rblp:::BLPParameters$new(sigma = sigma)
 
   theta <- params$compress()
   expect_equal(length(theta), 3)  # 2 diagonal + 1 lower tri
@@ -14,7 +14,7 @@ test_that("BLPParameters compress and expand sigma", {
 
 test_that("BLPParameters handles fixed elements", {
   sigma <- matrix(c(1, 0, 0, 2), 2, 2)
-  params <- BLPParameters$new(sigma = sigma)
+  params <- rblp:::BLPParameters$new(sigma = sigma)
 
   theta <- params$compress()
   expect_equal(length(theta), 2)  # only diagonal
@@ -27,7 +27,7 @@ test_that("BLPParameters handles fixed elements", {
 
 test_that("BLPParameters bounds are correct", {
   sigma <- matrix(c(1, 0.5, 0, 2), 2, 2)
-  params <- BLPParameters$new(sigma = sigma)
+  params <- rblp:::BLPParameters$new(sigma = sigma)
   bounds <- params$get_bounds()
 
   expect_equal(length(bounds$lower), 3)
@@ -39,7 +39,7 @@ test_that("BLPParameters bounds are correct", {
 
 test_that("BLPParameters labels are generated", {
   sigma <- matrix(c(1, 0.5, 0, 2), 2, 2)
-  params <- BLPParameters$new(sigma = sigma)
+  params <- rblp:::BLPParameters$new(sigma = sigma)
   labels <- params$get_labels()
   expect_equal(length(labels), 3)
   expect_equal(labels[1], "sigma[1,1]")

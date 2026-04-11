@@ -118,18 +118,23 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
       }
 
       # Supply-side instruments: exogenous cost shifters from X3 plus excluded
-      # supply instruments. The logic mirrors the demand side.
-      if (add_exogenous && !is.null(X3) && !is.null(ZS_excluded)) {
-        x3_names <- colnames(X3)
-        exog_cols3 <- which(!grepl("prices|shares", x3_names, ignore.case = TRUE))
-        if (length(exog_cols3) > 0) {
-          X3_exog <- X3[, exog_cols3, drop = FALSE]
-          ZS <- cbind(X3_exog, ZS_excluded)
+      # supply instruments. Only used when a supply formulation is present (K3 > 0).
+      # Otherwise, supply_instruments* columns in the data are ignored.
+      if (!is.null(X3) && self$K3 > 0) {
+        if (add_exogenous && !is.null(ZS_excluded)) {
+          x3_names <- colnames(X3)
+          exog_cols3 <- which(!grepl("prices|shares", x3_names, ignore.case = TRUE))
+          if (length(exog_cols3) > 0) {
+            X3_exog <- X3[, exog_cols3, drop = FALSE]
+            ZS <- cbind(X3_exog, ZS_excluded)
+          } else {
+            ZS <- ZS_excluded
+          }
         } else {
           ZS <- ZS_excluded
         }
       } else {
-        ZS <- ZS_excluded
+        ZS <- NULL
       }
 
       # Frisch-Waugh-Lovell (FWL) demeaning for absorbed fixed effects.

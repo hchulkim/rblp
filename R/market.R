@@ -38,6 +38,7 @@ BLPMarket <- R6::R6Class("BLPMarket",
       if (is.null(private$sigma_) || self$I == 0) return(NULL)
       K2 <- nrow(private$sigma_)
       nodes <- private$agents_$nodes  # I x K2
+      if (!is.matrix(nodes)) nodes <- as.matrix(nodes)
       # Compute individual-specific deviations from mean taste: beta_ik - beta_k.
       # In the BLP model, consumer i's coefficient on characteristic k is:
       #   beta_ik = beta_k + sigma_k * nu_ik + pi_k' * D_i
@@ -48,6 +49,7 @@ BLPMarket <- R6::R6Class("BLPMarket",
       coeffs <- private$sigma_ %*% t(nodes)
       if (!is.null(private$pi_) && !is.null(private$agents_$demographics)) {
         demos <- private$agents_$demographics  # I x D
+        if (!is.matrix(demos)) demos <- as.matrix(demos)
         coeffs <- coeffs + private$pi_ %*% t(demos)
       }
       # Optional nonlinear transforms on random coefficients: "log" ensures
@@ -180,24 +182,32 @@ BLPMarket <- R6::R6Class("BLPMarket",
         if (is.list(probabilities)) probabilities$conditionals else NULL
       }
 
-      Jacob <- matrix(0, self$J, self$J)
+      # Build same-group indicator matrix once (J x J)
+      nids <- private$nesting_ids_
+      same_group <- outer(nids, nids, "==")
+
+      # Vectorized nested logit Jacobian: iterate over agents (I), not products (J^2)
+      J <- self$J
+      inv_rho <- 1 / (1 - rho)
+      rho_inv <- rho / (1 - rho)
+
+      Jacob <- matrix(0, J, J)
       for (i in seq_len(self$I)) {
         p_i <- P[, i]
         c_i <- if (!is.null(C)) C[, i] else p_i
-        for (j in seq_len(self$J)) {
-          for (k in seq_len(self$J)) {
-            same_group <- !is.null(private$nesting_ids_) &&
-              private$nesting_ids_[j] == private$nesting_ids_[k]
-            term1 <- p_i[j] * ((j == k) - p_i[k]) / (1 - rho)
-            if (same_group && j != k) {
-              term1 <- term1 - rho / (1 - rho) * p_i[j] * c_i[k]
-            }
-            if (j == k) {
-              term1 <- term1 + rho / (1 - rho) * p_i[j] * (1 - c_i[j])
-            }
-            Jacob[j, k] <- Jacob[j, k] + w[i] * term1
-          }
-        }
+
+        # Base logit term: p_j * (I{j=k} - p_k) / (1-rho)
+        base <- (diag(p_i, nrow = J) - outer(p_i, p_i)) * inv_rho
+
+        # Within-nest correction for j != k, same group:
+        # subtract rho/(1-rho) * p_j * c_k
+        nest_cross <- same_group * outer(p_i, c_i) * rho_inv
+        diag(nest_cross) <- 0  # only j != k
+
+        # Own-product correction: add rho/(1-rho) * p_j * (1 - c_j) on diagonal
+        diag_correction <- rho_inv * p_i * (1 - c_i)
+
+        Jacob <- Jacob + w[i] * (base - nest_cross + diag(diag_correction, nrow = J))
       }
       Jacob
     },
@@ -570,11 +580,15 @@ BLPMarket <- R6::R6Class("BLPMarket",
 
       K2 <- nrow(private$sigma_)
       price_col <- private$products_$price_col_x2
-      if (is.null(price_col) || price_col == 0) {
+      if (is.null(price_col) || is.na(price_col) || price_col == 0) {
         return(rep(private$products_$beta_price %||% -1, self$I))
       }
 
       nodes <- private$agents_$nodes
+      if (is.null(nodes) || self$I == 0) {
+        return(rep(private$products_$beta_price %||% -1, max(self$I, 1L)))
+      }
+      if (!is.matrix(nodes)) nodes <- as.matrix(nodes)
       alpha_base <- private$products_$beta_price %||% 0
 
       alpha <- rep(alpha_base, self$I)
@@ -582,8 +596,9 @@ BLPMarket <- R6::R6Class("BLPMarket",
         alpha <- alpha + as.numeric(private$sigma_[price_col, ] %*% t(nodes))
       }
       if (!is.null(private$pi_) && !is.null(private$agents_$demographics)) {
-        alpha <- alpha + as.numeric(private$pi_[price_col, ] %*%
-                                     t(private$agents_$demographics))
+        demos <- private$agents_$demographics
+        if (!is.matrix(demos)) demos <- as.matrix(demos)
+        alpha <- alpha + as.numeric(private$pi_[price_col, ] %*% t(demos))
       }
       alpha
     }

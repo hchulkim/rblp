@@ -320,12 +320,16 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
         }
       }
 
+      # Pass integration from the simulation so the problem has nodes/weights
+      integration <- self$simulation$.__enclos_env__$private$integration_
+
       blp_problem(
         product_formulations = product_formulations,
         product_data = pd,
         agent_formulation = self$simulation$agent_formulation,
         agent_data = if (!is.null(self$simulation$agents$original_data))
           self$simulation$agents$original_data else NULL,
+        integration = integration,
         rc_types = self$simulation$rc_types,
         costs_type = self$simulation$costs_type,
         add_exogenous = TRUE

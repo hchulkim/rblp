@@ -402,6 +402,11 @@ BLPResults <- R6::R6Class("BLPResults",
     summary_table = function() {
       rows <- list()
 
+      # Track index into the nonlinear theta SE vector across sigma, pi, rho
+      labels <- private$params_$get_labels()
+      theta_se <- self$se
+      idx <- 0L
+
       # Beta: linear (mean) utility parameters from the demand equation.
       # These are the average valuations of product characteristics across
       # the consumer population: delta_j = X1_j' beta + xi_j.
@@ -426,9 +431,6 @@ BLPResults <- R6::R6Class("BLPResults",
       # Only lower-triangular entries that were free (non-zero starting
       # values) are reported, following the BLPParameters convention.
       if (!is.null(self$sigma)) {
-        labels <- private$params_$get_labels()
-        theta_se <- self$se
-        idx <- 0L
         K2 <- nrow(self$sigma)
         for (j in seq_len(K2)) {
           for (i in j:K2) {
@@ -459,11 +461,13 @@ BLPResults <- R6::R6Class("BLPResults",
         for (d in seq_len(D)) {
           for (k in seq_len(K2)) {
             if (self$pi[k, d] != 0) {
+              idx <- idx + 1L
               rows[[length(rows) + 1]] <- data.frame(
                 parameter = sprintf("pi[%d,%d]", k, d),
                 type = "demographics (pi)",
                 estimate = self$pi[k, d],
-                se = NA_real_,  # Pi SE requires more complex extraction
+                se = if (!is.null(theta_se) && idx <= length(theta_se))
+                  theta_se[idx] else NA_real_,
                 stringsAsFactors = FALSE
               )
             }
@@ -493,11 +497,15 @@ BLPResults <- R6::R6Class("BLPResults",
       # Rho
       if (!is.null(self$rho)) {
         for (h in seq_along(self$rho)) {
+          if (self$rho[h] != 0) {
+            idx <- idx + 1L
+          }
           rows[[length(rows) + 1]] <- data.frame(
             parameter = sprintf("rho[%d]", h),
             type = "nesting (rho)",
             estimate = self$rho[h],
-            se = NA_real_,
+            se = if (self$rho[h] != 0 && !is.null(theta_se) && idx <= length(theta_se))
+              theta_se[idx] else NA_real_,
             stringsAsFactors = FALSE
           )
         }

@@ -305,3 +305,40 @@ find_extdata_ <- function(filename) {
   stop(sprintf("Cannot find '%s'. Is the rblp package installed or are you in the package root?",
                filename))
 }
+
+#' OTC Drug Product Data (baby_BLP)
+#'
+#' Product-level data from Lei Ma's baby_BLP project. Contains weekly sales
+#' of 11 over-the-counter pain relief products across 2 stores and 48 weeks,
+#' yielding 96 store-week markets and 1,056 observations.
+#'
+#' @format A data frame with 1056 rows and the following columns:
+#' \describe{
+#'   \item{market_ids}{Market identifier (store-week)}
+#'   \item{firm_ids}{Product identifier (1--11)}
+#'   \item{shares}{Market share (sales / market size)}
+#'   \item{prices}{Retail price}
+#'   \item{promotion}{Promotion indicator (0/1)}
+#'   \item{cost}{Wholesale cost}
+#'   \item{product}{Product factor (for fixed effects)}
+#' }
+#'
+#' @source \url{https://github.com/leima0521/baby_BLP}
+#' @references
+#' Lei Ma, baby_BLP: A pedagogical implementation of BLP demand estimation.
+#' @seealso \code{vignette("baby-blp-replication")} for a walkthrough
+#' @export
+load_otc_products <- function() {
+  otc <- find_extdata_("otc_baby_blp.csv")
+
+  data.frame(
+    market_ids  = as.character(otc$mkt),
+    firm_ids    = as.character(otc$product),
+    shares      = otc$mkt_share,
+    prices      = otc$price,
+    promotion   = otc$promotion,
+    cost        = otc$cost,
+    product     = factor(otc$product),
+    stringsAsFactors = FALSE
+  )
+}
