@@ -347,11 +347,14 @@ convergence rate.</p>
 <div class="section level2">
 <h2 id="case-3-rc-logit-with-random-coefficients-200-replications">Case 3: RC Logit with Random Coefficients — 200 Replications<a class="anchor" aria-label="anchor" href="#case-3-rc-logit-with-random-coefficients-200-replications"></a>
 </h2>
-<p><strong>DGP:</strong> Same as Case 1 plus random coefficients
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Σ</mi><mo>=</mo><mtext mathvariant="normal">diag</mtext><mrow><mo stretchy="true" form="prefix">(</mo><mn>0.5</mn><mo>,</mo><mn>0.5</mn><mo>,</mo><mn>0.5</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\Sigma = \text{diag}(0.5, 0.5, 0.5)</annotation></semantics></math>
-with Gauss-Hermite integration (size 5).</p>
+<p><strong>DGP:</strong> Same as Case 1 plus random coefficients on
+price and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Σ</mi><mo>=</mo><mtext mathvariant="normal">diag</mtext><mrow><mo stretchy="true" form="prefix">(</mo><mn>0.5</mn><mo>,</mo><mn>0.5</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\Sigma = \text{diag}(0.5, 0.5)</annotation></semantics></math>
+and Gauss-Hermite integration (size 5).</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">true_sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">true_sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">res_rc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">200</span>, <span class="kw">function</span><span class="op">(</span><span class="va">seed</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># ... RC estimation with sigma = true_sigma * 0.8 as starting value</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
@@ -450,15 +453,16 @@ and cost shifter
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
 as excluded demand instrument.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 200 reps of RC logit + supply, using w as excluded instrument</span></span>
-<span><span class="co"># and x entering both utility and cost (for strong first stage)</span></span></code></pre></div>
-<p>The supply-side gamma parameters are recovered alongside demand. When
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-enters both utility and cost, it creates a strong instrument chain:
-rival
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>
-values shift rival costs, which shift rival prices, which shift own
-demand. This indirect channel provides identification.</p>
+<code class="sourceCode R"><span><span class="co"># 200 reps of RC logit + supply, using w as excluded instrument.</span></span>
+<span><span class="co"># Important: the X2 random-coefficients formulation should be written</span></span>
+<span><span class="co"># without an intercept (for example, ~ 0 + prices + x) so that its</span></span>
+<span><span class="co"># dimension matches the supplied sigma matrix.</span></span></code></pre></div>
+<p>Supply-side validation is more fragile than the strong-IV logit case
+and depends heavily on getting the RC specification dimension exactly
+right. In particular, adding an implicit intercept to X2 while supplying
+a smaller sigma matrix will cause the simulation to fail before
+estimation. This case should therefore be treated as a specification
+check rather than as a headline benchmark.</p>
 </div>
 <div class="section level2">
 <h2 id="case-5-ci-coverage">Case 5: CI Coverage<a class="anchor" aria-label="anchor" href="#case-5-ci-coverage"></a>
@@ -553,7 +557,7 @@ nonlinearity.</li>
 <td>4</td>
 <td>Supply-side</td>
 <td>200</td>
-<td>Gamma recovered alongside demand</td>
+<td>Specification-sensitive; validate dimensions first</td>
 </tr>
 <tr class="even">
 <td>5</td>

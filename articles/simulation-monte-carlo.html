@@ -358,7 +358,7 @@ and integration):</p>
 <span><span class="va">rc_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/blp_simulation.html">blp_simulation</a></span><span class="op">(</span></span>
 <span>  product_formulations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">prices</span> <span class="op">+</span> <span class="va">x</span><span class="op">)</span>,  <span class="co"># X1: linear</span></span>
-<span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">x</span><span class="op">)</span>            <span class="co"># X2: nonlinear (RC on x only)</span></span>
+<span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">+</span> <span class="va">x</span><span class="op">)</span>        <span class="co"># X2: nonlinear (RC on x only)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  product_data <span class="op">=</span> <span class="va">id_data2</span>,</span>
 <span>  beta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="op">-</span><span class="fl">3.0</span>, <span class="fl">1.5</span><span class="op">)</span>,   <span class="co"># true linear parameters</span></span>
@@ -544,7 +544,7 @@ instruments:</p>
 <span><span class="va">supply_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/blp_simulation.html">blp_simulation</a></span><span class="op">(</span></span>
 <span>  product_formulations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">prices</span> <span class="op">+</span> <span class="va">x</span><span class="op">)</span>,   <span class="co"># X1: demand</span></span>
-<span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">x</span><span class="op">)</span>,            <span class="co"># X2: RC on x</span></span>
+<span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">+</span> <span class="va">x</span><span class="op">)</span>,        <span class="co"># X2: RC on x</span></span>
 <span>    <span class="fu"><a href="../reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">w</span><span class="op">)</span>         <span class="co"># X3: cost function</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  product_data <span class="op">=</span> <span class="va">id_data_supply</span>,</span>

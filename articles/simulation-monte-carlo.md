@@ -273,7 +273,7 @@ id_data2$x <- runif(nrow(id_data2), 0, 1)
 rc_sim <- blp_simulation(
   product_formulations = list(
     blp_formulation(~ prices + x),  # X1: linear
-    blp_formulation(~ x)            # X2: nonlinear (RC on x only)
+    blp_formulation(~ 0 + x)        # X2: nonlinear (RC on x only)
   ),
   product_data = id_data2,
   beta = c(1.0, -3.0, 1.5),   # true linear parameters
@@ -405,7 +405,7 @@ id_data_supply$w <- runif(nrow(id_data_supply), 0.5, 1.5)  # cost shifter
 supply_sim <- blp_simulation(
   product_formulations = list(
     blp_formulation(~ prices + x),   # X1: demand
-    blp_formulation(~ x),            # X2: RC on x
+    blp_formulation(~ 0 + x),        # X2: RC on x
     blp_formulation(~ x + w)         # X3: cost function
   ),
   product_data = id_data_supply,

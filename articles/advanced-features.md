@@ -205,14 +205,14 @@ standard normal.
 ``` r
 # RC model for importance sampling
 sim_rc <- blp_simulation(
-  list(blp_formulation(~ prices + x), blp_formulation(~ prices + x)),
-  id_data, beta = c(0.5, -2.0, 0.8), sigma = diag(c(0.3, 0.3, 0.3)),
+  list(blp_formulation(~ prices + x), blp_formulation(~ 0 + prices + x)),
+  id_data, beta = c(0.5, -2.0, 0.8), sigma = diag(c(0.3, 0.3)),
   integration = blp_integration("product", size = 3),
   xi_variance = 0.2, seed = 42
 )
 sim_rc_res <- sim_rc$replace_endogenous()
 prob_rc <- sim_rc_res$to_problem()
-est_rc <- prob_rc$solve(sigma = diag(c(0.3, 0.3, 0.3)), method = "1s",
+est_rc <- prob_rc$solve(sigma = diag(c(0.3, 0.3)), method = "1s",
   optimization = blp_optimization("l-bfgs-b", method_options = list(maxit = 50)))
 
 is_result <- est_rc$importance_sampling(n_draws = 100, seed = 42)
@@ -222,7 +222,7 @@ cat(sprintf("  Draws: %d\n", nrow(is_result$nodes)))
 #>   Draws: 100
 cat(sprintf("  Effective sample size: %.1f (of %d)\n",
             is_result$effective_sample_size, nrow(is_result$nodes)))
-#>   Effective sample size: 1.7 (of 100)
+#>   Effective sample size: 3.4 (of 100)
 
 # Re-estimate with importance-sampled nodes
 prob_is <- is_result$to_problem()
