@@ -103,11 +103,11 @@ test_that("supply-side estimation with RC logit and cost equation", {
   id_data$w <- runif(nrow(id_data), 0, 1)  # cost shifter
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
   f3 <- blp_formulation(~ w)
 
   true_beta <- c(0.5, -2.0, 0.8)
-  true_sigma <- diag(c(0.3, 0.3, 0.3))
+  true_sigma <- diag(c(0.3, 0.3))
   true_gamma <- c(0.5, 1.0)
 
   sim <- blp_simulation(
@@ -138,7 +138,7 @@ test_that("supply-side estimation with RC logit and cost equation", {
   expect_true(sim_problem$MS > 0, info = "Supply instruments should be present")
 
   est <- sim_problem$solve(
-    sigma = diag(c(0.3, 0.3, 0.3)),
+    sigma = diag(c(0.3, 0.3)),
     method = "1s",
     optimization = blp_optimization("l-bfgs-b",
       method_options = list(maxit = 100))

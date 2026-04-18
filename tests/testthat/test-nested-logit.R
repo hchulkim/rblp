@@ -13,14 +13,14 @@ test_that("nested logit probabilities sum to less than 1", {
   id_data$nesting_ids <- rep(c("A", "B", "C"), length.out = nrow(id_data))
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   # Simulate with nesting
   sim <- blp_simulation(
     product_formulations = list(f1, f2),
     product_data = id_data,
     beta = c(0.5, -2.0, 0.8),
-    sigma = diag(c(0.5, 0.5, 0.5)),
+    sigma = diag(c(0.5, 0.5)),
     rho = 0.5,
     integration = blp_integration("product", size = 3),
     xi_variance = 0.2,
@@ -54,7 +54,7 @@ test_that("rho = 0 nested logit matches standard logit", {
   id_data$prices <- runif(nrow(id_data), 1, 3)
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   integration <- blp_integration("product", size = 3)
 
@@ -66,7 +66,7 @@ test_that("rho = 0 nested logit matches standard logit", {
   )
 
   # Solve with rho = 0 (fixed at zero, so effectively no nesting)
-  sigma0 <- diag(c(0.3, 0.3, 0.3))
+  sigma0 <- diag(c(0.3, 0.3))
   results_no_nest <- problem$solve(
     sigma = sigma0,
     rho = 0,
@@ -118,7 +118,7 @@ test_that("higher rho increases within-nest substitution in nested logit probabi
   )
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
   integration <- blp_integration("product", size = 3)
 
   problem <- blp_problem(
@@ -132,15 +132,15 @@ test_that("higher rho increases within-nest substitution in nested logit probabi
 
   mkt_low <- rblp:::BLPMarket$new(
     products = md$products, agents = md$agents,
-    sigma = diag(c(0.3, 0.3, 0.3)), rho = 0.2,
-    rc_types = c("linear", "linear", "linear"),
+    sigma = diag(c(0.3, 0.3)), rho = 0.2,
+    rc_types = c("linear", "linear"),
     epsilon_scale = 1.0
   )
 
   mkt_high <- rblp:::BLPMarket$new(
     products = md$products, agents = md$agents,
-    sigma = diag(c(0.3, 0.3, 0.3)), rho = 0.8,
-    rc_types = c("linear", "linear", "linear"),
+    sigma = diag(c(0.3, 0.3)), rho = 0.8,
+    rc_types = c("linear", "linear"),
     epsilon_scale = 1.0
   )
 

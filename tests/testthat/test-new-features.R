@@ -235,14 +235,14 @@ test_that("importance_sampling returns valid agent data", {
   id_data$x <- runif(nrow(id_data))
 
   sim <- blp_simulation(
-    list(blp_formulation(~ prices + x), blp_formulation(~ prices + x)),
-    id_data, beta = c(0.5, -2.0, 0.8), sigma = diag(c(0.3, 0.3, 0.3)),
+    list(blp_formulation(~ prices + x), blp_formulation(~ 0 + prices + x)),
+    id_data, beta = c(0.5, -2.0, 0.8), sigma = diag(c(0.3, 0.3)),
     integration = blp_integration("product", size = 3),
     xi_variance = 0.2, seed = 42
   )
   sim_res <- sim$replace_endogenous()
   prob <- sim_res$to_problem()
-  est <- prob$solve(sigma = diag(c(0.3, 0.3, 0.3)), method = "1s",
+  est <- prob$solve(sigma = diag(c(0.3, 0.3)), method = "1s",
                     optimization = blp_optimization("l-bfgs-b",
                       method_options = list(maxit = 50)))
 

@@ -145,11 +145,11 @@ consistent.** All exogenous parameters show the expected convergence rate.
 
 ## Case 3: RC Logit with Random Coefficients --- 200 Replications
 
-**DGP:** Same as Case 1 plus random coefficients
-$\Sigma = \text{diag}(0.5, 0.5, 0.5)$ with Gauss-Hermite integration (size 5).
+**DGP:** Same as Case 1 plus random coefficients on price and $x$ with
+$\Sigma = \text{diag}(0.5, 0.5)$ and Gauss-Hermite integration (size 5).
 
 ```{r case3}
-true_sigma <- diag(c(0.5, 0.5, 0.5))
+true_sigma <- diag(c(0.5, 0.5))
 res_rc <- lapply(1:200, function(seed) {
   # ... RC estimation with sigma = true_sigma * 0.8 as starting value
 })
@@ -190,14 +190,18 @@ $mc_j = \gamma_0 + \gamma_x x_j + \gamma_w w_j + \omega_j$ with
 $\omega \sim N(0, 0.2)$, and cost shifter $w$ as excluded demand instrument.
 
 ```{r case4}
-# 200 reps of RC logit + supply, using w as excluded instrument
-# and x entering both utility and cost (for strong first stage)
+# 200 reps of RC logit + supply, using w as excluded instrument.
+# Important: the X2 random-coefficients formulation should be written
+# without an intercept (for example, ~ 0 + prices + x) so that its
+# dimension matches the supplied sigma matrix.
 ```
 
-The supply-side gamma parameters are recovered alongside demand. When
-$x$ enters both utility and cost, it creates a strong instrument chain:
-rival $x$ values shift rival costs, which shift rival prices, which
-shift own demand. This indirect channel provides identification.
+Supply-side validation is more fragile than the strong-IV logit case and
+depends heavily on getting the RC specification dimension exactly right.
+In particular, adding an implicit intercept to X2 while supplying a
+smaller sigma matrix will cause the simulation to fail before estimation.
+This case should therefore be treated as a specification check rather
+than as a headline benchmark.
 
 ## Case 5: CI Coverage
 
@@ -232,7 +236,7 @@ with weak instruments. Two approaches to improve coverage:
 | 1 | Logit + BLP IVs | 1000 | Exogenous x: perfect. Price: weak IV bias |
 | 2 | Logit, T=20 vs 100 | 200+200 | RMSE ratio ~0.40 (consistency) |
 | 3 | RC logit | 200 | Beta and sigma recovered |
-| 4 | Supply-side | 200 | Gamma recovered alongside demand |
+| 4 | Supply-side | 200 | Specification-sensitive; validate dimensions first |
 | 5 | CI coverage | 500 | 95.6% with strong IV (nominal: 95%) |
 
 The Case 0 strong-IV result is the definitive validation: with a

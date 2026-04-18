@@ -360,10 +360,10 @@ test_that("Simulation roundtrip: RC logit recovers parameter signs", {
   id_data$x <- runif(nrow(id_data), 0, 1)
 
   true_beta <- c(0.5, -3.0, 1.0)
-  true_sigma <- diag(c(0.5, 0.5, 0.5))
+  true_sigma <- diag(c(0.5, 0.5))
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   sim <- blp_simulation(
     product_formulations = list(f1, f2),
@@ -381,7 +381,7 @@ test_that("Simulation roundtrip: RC logit recovers parameter signs", {
 
   sim_problem <- sim_results$to_problem()
   est <- sim_problem$solve(
-    sigma = diag(c(0.4, 0.4, 0.4)),
+    sigma = diag(c(0.4, 0.4)),
     method = "2s",
     optimization = blp_optimization("l-bfgs-b",
       method_options = list(maxit = 200))
@@ -389,8 +389,8 @@ test_that("Simulation roundtrip: RC logit recovers parameter signs", {
 
   cat(sprintf("  RC roundtrip: beta = (%.4f, %.4f, %.4f), true = (0.5, -3.0, 1.0)\n",
               est$beta[1], est$beta[2], est$beta[3]))
-  cat(sprintf("  RC roundtrip: sigma diag = (%.4f, %.4f, %.4f), true = (0.5, 0.5, 0.5)\n",
-              est$sigma[1, 1], est$sigma[2, 2], est$sigma[3, 3]))
+  cat(sprintf("  RC roundtrip: sigma diag = (%.4f, %.4f), true = (0.5, 0.5)\n",
+              est$sigma[1, 1], est$sigma[2, 2]))
 
   # Price coefficient should be negative (true = -3.0)
   expect_true(est$beta[2] < 0,

@@ -543,7 +543,7 @@ BLPProblem <- R6::R6Class("BLPProblem",
       gamma <- NULL
       omega <- NULL
       omega_jac_concentrated <- NULL
-      if (self$K3 > 0 && !is.null(costs_vec)) {
+      if (self$K3 > 0 && !is.null(costs_vec) && !is.null(self$products$ZS) && MS > 0) {
         X3 <- self$products$X3
         ZS <- self$products$ZS
         W_supply <- W[(MD + 1):(MD + MS), (MD + 1):(MD + MS), drop = FALSE]
@@ -735,7 +735,7 @@ BLPProblem <- R6::R6Class("BLPProblem",
         beta_se <- sqrt(pmax(diag(beta_cov), 0))
       }
 
-      if (!is.null(progress$gamma) && self$K3 > 0) {
+      if (!is.null(progress$gamma) && self$K3 > 0 && !is.null(self$products$ZS) && self$MS > 0) {
         X3 <- self$products$X3
         ZS <- self$products$ZS
         MS <- self$MS

@@ -76,7 +76,7 @@ run_one_rc <- function(seed, T, J, F, true_beta, true_sigma) {
     sim <- blp_simulation(
       product_formulations = list(
         blp_formulation(~ prices + x1 + x2),
-        blp_formulation(~ prices + x1 + x2)
+        blp_formulation(~ 0 + prices + x1 + x2)
       ),
       product_data = id_data,
       beta = true_beta,
@@ -101,7 +101,7 @@ run_one_rc <- function(seed, T, J, F, true_beta, true_sigma) {
 
     prob <- blp_problem(
       list(blp_formulation(~ prices + x1 + x2),
-           blp_formulation(~ prices + x1 + x2)),
+           blp_formulation(~ 0 + prices + x1 + x2)),
       pd, integration = blp_integration("product", size = 5),
       add_exogenous = TRUE
     )
@@ -126,7 +126,7 @@ run_one_supply <- function(seed, T, J, F, true_beta, true_gamma) {
     sim <- blp_simulation(
       product_formulations = list(
         blp_formulation(~ prices + x1 + x2),
-        blp_formulation(~ prices + x1 + x2),
+        blp_formulation(~ 0 + prices + x1 + x2),
         blp_formulation(~ w)
       ),
       product_data = id_data,
@@ -155,7 +155,7 @@ run_one_supply <- function(seed, T, J, F, true_beta, true_gamma) {
 
     prob <- blp_problem(
       list(blp_formulation(~ prices + x1 + x2),
-           blp_formulation(~ prices + x1 + x2),
+           blp_formulation(~ 0 + prices + x1 + x2),
            blp_formulation(~ w)),
       pd, integration = blp_integration("product", size = 3),
       add_exogenous = TRUE
@@ -355,7 +355,7 @@ test_that("MC Case C0: RC logit with strong IV recovers beta and sigma (200 reps
   skip_on_cran()
 
   true_beta <- c(0.5, -3.0, 1.0)
-  true_sigma <- diag(c(0.5, 0.5, 0.5))
+  true_sigma <- diag(c(0.5, 0.5))
   n_reps <- 200L
 
   cat(sprintf("\n  MC Case C0: RC logit + strong IV, %d reps\n", n_reps))
@@ -371,7 +371,7 @@ test_that("MC Case C0: RC logit with strong IV recovers beta and sigma (200 reps
       sim <- blp_simulation(
         product_formulations = list(
           blp_formulation(~ prices + x),
-          blp_formulation(~ prices + x),
+          blp_formulation(~ 0 + prices + x),
           blp_formulation(~ x + w)
         ),
         product_data = id_data,
@@ -395,7 +395,7 @@ test_that("MC Case C0: RC logit with strong IV recovers beta and sigma (200 reps
         pd[[paste0("demand_instruments", k)]] <- blp_iv[, k]
 
       prob <- blp_problem(
-        list(blp_formulation(~ prices + x), blp_formulation(~ prices + x)),
+        list(blp_formulation(~ prices + x), blp_formulation(~ 0 + prices + x)),
         pd, integration = blp_integration("product", size = 5)
       )
       est <- prob$solve(
@@ -413,7 +413,7 @@ test_that("MC Case C0: RC logit with strong IV recovers beta and sigma (200 reps
   mc_beta <- summarize_mc(lapply(results, `[[`, "beta"), true_beta,
                           c("intercept", "price", "x"))
   mc_sigma <- summarize_mc(lapply(results, `[[`, "sigma"), diag(true_sigma),
-                           c("sigma_1", "sigma_2", "sigma_3"))
+                           c("sigma_1", "sigma_2"))
 
   cat("  Beta:\n")
   for (i in seq_len(nrow(mc_beta)))

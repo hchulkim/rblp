@@ -36,13 +36,13 @@ test_that("RC logit sigma SEs are computed", {
   id_data$x <- runif(nrow(id_data), 0, 1)
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   sim <- blp_simulation(
     product_formulations = list(f1, f2),
     product_data = id_data,
     beta = c(0.5, -2.0, 0.8),
-    sigma = diag(c(0.5, 0.5, 0.5)),
+    sigma = diag(c(0.5, 0.5)),
     integration = blp_integration("product", size = 3),
     xi_variance = 0.2,
     seed = 900
@@ -54,7 +54,7 @@ test_that("RC logit sigma SEs are computed", {
 
   sim_problem <- sim_results$to_problem()
   est <- sim_problem$solve(
-    sigma = diag(c(0.4, 0.4, 0.4)),
+    sigma = diag(c(0.4, 0.4)),
     method = "2s",
     optimization = blp_optimization("l-bfgs-b",
       method_options = list(maxit = 200))
@@ -112,13 +112,13 @@ test_that("Wald test rejects false restriction", {
   id_data$x <- runif(nrow(id_data), 0, 1)
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   sim <- blp_simulation(
     product_formulations = list(f1, f2),
     product_data = id_data,
     beta = c(0.5, -2.0, 0.8),
-    sigma = diag(c(0.5, 0.5, 0.5)),
+    sigma = diag(c(0.5, 0.5)),
     integration = blp_integration("product", size = 3),
     xi_variance = 0.2,
     seed = 901
@@ -130,7 +130,7 @@ test_that("Wald test rejects false restriction", {
 
   sim_problem <- sim_results$to_problem()
   est <- sim_problem$solve(
-    sigma = diag(c(0.4, 0.4, 0.4)),
+    sigma = diag(c(0.4, 0.4)),
     method = "2s",
     optimization = blp_optimization("l-bfgs-b",
       method_options = list(maxit = 200))
@@ -139,7 +139,7 @@ test_that("Wald test rejects false restriction", {
   # If parameter covariances exist, test Wald
   if (!is.null(est$parameter_covariances)) {
     n_free <- est$problem$.__enclos_env__$private  # Not accessible, use params
-    n_sigma <- sum(diag(c(0.4, 0.4, 0.4)) != 0)
+    n_sigma <- sum(diag(c(0.4, 0.4)) != 0)
 
     # Test that first sigma != 0 (should not reject if sigma is large)
     R <- matrix(0, 1, n_sigma)

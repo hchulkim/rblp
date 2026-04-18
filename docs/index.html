@@ -110,31 +110,11 @@
 <code class="sourceCode R"><span><span class="co"># Install from GitHub</span></span>
 <span><span class="co"># install.packages("devtools")</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"hchulkim/rblp"</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="reproducible-development-shell">Reproducible Development Shell<a class="anchor" aria-label="anchor" href="#reproducible-development-shell"></a>
-</h3>
-<p>This repository includes a pinned Nix environment for reproducible testing and benchmarking. It keeps writable R state inside the project directory.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">nix-shell</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="ex">R</span> CMD INSTALL <span class="at">-l</span> .R-lib .</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"library(testthat); testthat::test_dir('tests/testthat', reporter = 'summary')"</span></span></code></pre></div>
-<p>Repo-local directories used by the shell:</p>
-<ul>
-<li>
-<code>.R-lib/</code> for package installs</li>
-<li>
-<code>.tmp/</code> for temporary files</li>
-<li>
-<code>.cache/</code> for cache files</li>
-<li>
-<code>.home/</code> for shell-local home state</li>
-</ul>
-<hr>
-</div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/hchulkim/rblp" class="external-link">rblp</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load Nevo (2000) cereal data</span></span>
@@ -148,7 +128,7 @@
 <div class="section level3">
 <h3 id="logit-with-product-fixed-effects">Logit with Product Fixed Effects<a class="anchor" aria-label="anchor" href="#logit-with-product-fixed-effects"></a>
 </h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Absorb product-level FE (matches pyblp Nevo tutorial, alpha ~ -30)</span></span>
 <span><span class="va">f1_fe</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">prices</span>, absorb <span class="op">=</span> <span class="op">~</span> <span class="va">product_ids</span><span class="op">)</span></span>
 <span><span class="va">fe_problem</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blp_problem.html">blp_problem</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">f1_fe</span><span class="op">)</span>, <span class="va">products</span><span class="op">)</span></span>
@@ -158,7 +138,7 @@
 <div class="section level3">
 <h3 id="random-coefficients-logit">Random Coefficients Logit<a class="anchor" aria-label="anchor" href="#random-coefficients-logit"></a>
 </h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">f1_rc</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">prices</span> <span class="op">+</span> <span class="va">sugar</span> <span class="op">+</span> <span class="va">mushy</span><span class="op">)</span></span>
 <span><span class="va">f2_rc</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="va">prices</span> <span class="op">+</span> <span class="va">sugar</span> <span class="op">+</span> <span class="va">mushy</span><span class="op">)</span></span>
 <span></span>
@@ -178,7 +158,7 @@
 <div class="section level3">
 <h3 id="rc-logit-with-demographics">RC Logit with Demographics<a class="anchor" aria-label="anchor" href="#rc-logit-with-demographics"></a>
 </h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">agents</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nevo_agents.html">load_nevo_agents</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">demo_form</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blp_formulation.html">blp_formulation</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">+</span> <span class="va">income</span> <span class="op">+</span> <span class="va">income_squared</span> <span class="op">+</span> <span class="va">age</span> <span class="op">+</span> <span class="va">child</span><span class="op">)</span></span>
 <span></span>
@@ -216,7 +196,7 @@
 <div class="section level2">
 <h2 id="post-estimation">Post-Estimation<a class="anchor" aria-label="anchor" href="#post-estimation"></a>
 </h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Own-price elasticities</span></span>
 <span><span class="va">E</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="fu">compute_elasticities</span><span class="op">(</span>market_id <span class="op">=</span> <span class="st">"C01Q1"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">E</span><span class="op">)</span></span>
@@ -236,7 +216,7 @@
 <div class="section level2">
 <h2 id="simulation">Simulation<a class="anchor" aria-label="anchor" href="#simulation"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create synthetic data with known parameters</span></span>
 <span><span class="va">id_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/build_id_data.html">build_id_data</a></span><span class="op">(</span>T <span class="op">=</span> <span class="fl">50</span>, J <span class="op">=</span> <span class="fl">20</span>, F <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="va">id_data</span><span class="op">$</span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">id_data</span><span class="op">)</span><span class="op">)</span></span>
@@ -299,7 +279,7 @@
 <div class="section level3">
 <h3 id="validation-snapshot">Validation Snapshot<a class="anchor" aria-label="anchor" href="#validation-snapshot"></a>
 </h3>
-<p>Recent validation in the pinned Nix shell matched core pyblp benchmarks closely:</p>
+<p>Recent validation matched core pyblp benchmarks closely:</p>
 <ul>
 <li>Nevo logit with product fixed effects (1-step): price coefficient <code>-30.4205</code>, objective <code>179.7148</code>
 </li>
@@ -315,7 +295,7 @@
 <h3 id="estimation-notes">Estimation Notes<a class="anchor" aria-label="anchor" href="#estimation-notes"></a>
 </h3>
 <p>For the Nevo random-coefficients benchmark, the most reliable configuration in recent testing was:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="va">demo_problem</span><span class="op">$</span><span class="fu">solve</span><span class="op">(</span></span>
 <span>  sigma <span class="op">=</span> <span class="va">sigma0</span>,</span>
 <span>  pi <span class="op">=</span> <span class="va">pi0</span>,</span>
@@ -334,7 +314,7 @@
 <li>
 <code>nlminb</code> converged faster but to a worse solution in the same benchmark</li>
 </ul>
-<p>Recent internal performance improvements also cache fixed IV algebra within each GMM step and reuse absorbed fixed-effect group indices across nonlinear evaluations, which reduces repeated work without changing estimates. In the current pinned shell, the Nevo RC+demographics benchmark runs in about <code>130-136</code> seconds on repeated runs with the recommended <code>l-bfgs-b</code> configuration.</p>
+<p>Recent internal performance improvements also cache fixed IV algebra within each GMM step and reuse absorbed fixed-effect group indices across nonlinear evaluations, which reduces repeated work without changing estimates. In recent benchmarking, the Nevo RC+demographics benchmark runs in about <code>130-136</code> seconds on repeated runs with the recommended <code>l-bfgs-b</code> configuration.</p>
 <hr>
 </div>
 </div>

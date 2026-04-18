@@ -11,13 +11,13 @@ test_that("analytic gradient matches finite-difference gradient for RC logit", {
   id_data$x <- runif(nrow(id_data), 0, 1)
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   sim <- blp_simulation(
     product_formulations = list(f1, f2),
     product_data = id_data,
     beta = c(0.5, -2.0, 0.8),
-    sigma = diag(c(0.5, 0.5, 0.5)),
+    sigma = diag(c(0.5, 0.5)),
     integration = blp_integration("product", size = 3),
     xi_variance = 0.2,
     seed = 700
@@ -30,7 +30,7 @@ test_that("analytic gradient matches finite-difference gradient for RC logit", {
   sim_problem <- sim_results$to_problem(add_instruments = TRUE)
 
   # Set up optimization that captures the gradient
-  sigma0 <- diag(c(0.4, 0.4, 0.4))
+  sigma0 <- diag(c(0.4, 0.4))
   params <- rblp:::BLPParameters$new(sigma = sigma0)
   theta0 <- params$compress()
 
@@ -101,7 +101,7 @@ test_that("xi-by-theta Jacobian is consistent via IFT", {
   id_data$prices <- runif(nrow(id_data), 1, 3)
 
   f1 <- blp_formulation(~ prices + x)
-  f2 <- blp_formulation(~ prices + x)
+  f2 <- blp_formulation(~ 0 + prices + x)
 
   integration <- blp_integration("product", size = 3)
   problem <- blp_problem(
@@ -110,7 +110,7 @@ test_that("xi-by-theta Jacobian is consistent via IFT", {
     integration = integration
   )
 
-  sigma <- diag(c(0.3, 0.3, 0.3))
+  sigma <- diag(c(0.3, 0.3))
   md <- problem$get_market_data(problem$unique_market_ids[1])
 
   sigma_free <- (sigma != 0) & lower.tri(sigma, diag = TRUE)
@@ -119,7 +119,7 @@ test_that("xi-by-theta Jacobian is consistent via IFT", {
     products = md$products,
     agents = md$agents,
     sigma = sigma,
-    rc_types = c("linear", "linear", "linear"),
+    rc_types = c("linear", "linear"),
     epsilon_scale = 1.0,
     sigma_free = sigma_free
   )

@@ -121,12 +121,12 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
       # supply instruments. Only used when a supply formulation is present (K3 > 0).
       # Otherwise, supply_instruments* columns in the data are ignored.
       if (!is.null(X3) && self$K3 > 0) {
-        if (add_exogenous && !is.null(ZS_excluded)) {
+        if (add_exogenous) {
           x3_names <- colnames(X3)
           exog_cols3 <- which(!grepl("prices|shares", x3_names, ignore.case = TRUE))
           if (length(exog_cols3) > 0) {
             X3_exog <- X3[, exog_cols3, drop = FALSE]
-            ZS <- cbind(X3_exog, ZS_excluded)
+            ZS <- if (!is.null(ZS_excluded)) cbind(X3_exog, ZS_excluded) else X3_exog
           } else {
             ZS <- ZS_excluded
           }
