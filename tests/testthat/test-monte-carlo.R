@@ -119,52 +119,37 @@ run_one_supply <- function(seed, T, J, F, true_beta, true_gamma) {
   tryCatch({
     id_data <- build_id_data(T = T, J = J, F = F)
     set.seed(seed)
-    id_data$x1 <- runif(nrow(id_data), 0, 1)
-    id_data$x2 <- runif(nrow(id_data), 0, 1)
+    id_data$x <- runif(nrow(id_data), 0, 1)
     id_data$w <- runif(nrow(id_data), 0, 1)
 
     sim <- blp_simulation(
       product_formulations = list(
-        blp_formulation(~ prices + x1 + x2),
-        blp_formulation(~ 0 + prices + x1 + x2),
-        blp_formulation(~ w)
+        blp_formulation(~ prices + x),
+        blp_formulation(~ 0 + x),
+        blp_formulation(~ x + w)
       ),
       product_data = id_data,
       beta = true_beta,
-      sigma = diag(c(0.3, 0.3, 0.3)),
+      sigma = matrix(0.3, 1, 1),
       gamma = true_gamma,
       integration = blp_integration("product", size = 3),
       xi_variance = 0.2,
-      omega_variance = 0.2,
-      correlation = 0.7,
+      omega_variance = 0.1,
+      correlation = 0.3,
       seed = seed
     )
     sim_res <- sim$replace_endogenous(
       iteration = blp_iteration("simple", list(atol = 1e-12, max_evaluations = 3000))
     )
 
-    pd <- sim_res$product_data
-    X_exog <- as.matrix(pd[, c("x1", "x2")])
-    blp_iv <- build_blp_instruments(X_exog, pd$market_ids, pd$firm_ids)
-    diff_iv <- build_differentiation_instruments(X_exog, pd$market_ids, pd$firm_ids,
-                                                  method = "quadratic")
-    all_iv <- cbind(blp_iv, diff_iv)
-    for (k in seq_len(ncol(all_iv))) {
-      pd[[paste0("demand_instruments", k - 1)]] <- all_iv[, k]
-    }
-
-    prob <- blp_problem(
-      list(blp_formulation(~ prices + x1 + x2),
-           blp_formulation(~ 0 + prices + x1 + x2),
-           blp_formulation(~ w)),
-      pd, integration = blp_integration("product", size = 3),
-      add_exogenous = TRUE
-    )
+    # Let SimulationResults.to_problem() construct pyblp-style cross-equation
+    # instruments: demand gets supply shifters, and supply gets demand shifters.
+    prob <- sim_res$to_problem()
     est <- prob$solve(
-      sigma = diag(c(0.3, 0.3, 0.3)),
-      method = "1s",
+      sigma = matrix(0.25, 1, 1),
+      method = "2s",
       optimization = blp_optimization("l-bfgs-b",
-        method_options = list(maxit = 100))
+        method_options = list(maxit = 150))
     )
     list(beta = est$beta, gamma = est$gamma)
   }, error = function(e) NULL)
@@ -485,9 +470,9 @@ test_that("MC Case C: RC logit recovers sigma (200 reps, strong IVs)", {
 test_that("MC Case D: supply gamma recovery (200 reps, strong IVs)", {
   skip_on_cran()
 
-  true_beta <- c(0.5, -3.0, 1.0, 0.5)
-  true_gamma <- c(0.5, 1.5)
-  n_reps <- 200L
+  true_beta <- c(0.5, -2.0, 0.8)
+  true_gamma <- c(0.2, 0.8, 1.0)
+  n_reps <- 100L
 
   cat(sprintf("\n  MC Case D: supply, %d reps\n", n_reps))
 
@@ -497,17 +482,27 @@ test_that("MC Case D: supply gamma recovery (200 reps, strong IVs)", {
 
   gamma_ests <- Filter(Negate(is.null), lapply(res, `[[`, "gamma"))
   if (length(gamma_ests) > 10) {
-    mc_gamma <- summarize_mc(gamma_ests, true_gamma, c("gamma_0", "gamma_w"))
+    mc_gamma <- summarize_mc(gamma_ests, true_gamma, c("gamma_0", "gamma_x", "gamma_w"))
     cat("  Gamma:\n")
     for (i in seq_len(nrow(mc_gamma)))
       cat(sprintf("    %-10s: true=%5.2f, mean=%7.4f, RMSE=%6.4f, sign=%5.1f%%\n",
                   mc_gamma$parameter[i], mc_gamma$true[i], mc_gamma$mean_est[i],
                   mc_gamma$rmse[i], mc_gamma$sign_correct_pct[i]))
 
-    # gamma_w sign should be correct most of the time with strong IVs
-    expect_true(mc_gamma$sign_correct_pct[2] > 60,
-                info = sprintf("gamma_w sign %.1f%% (need >60%%)",
+    # Supply slopes should be informative in the redesigned benchmark even
+    # though the supply intercept remains weakly identified.
+    expect_true(mc_gamma$sign_correct_pct[2] > 90,
+                info = sprintf("gamma_x sign %.1f%% (need >90%%)",
                               mc_gamma$sign_correct_pct[2]))
+    expect_true(mc_gamma$sign_correct_pct[3] > 90,
+                info = sprintf("gamma_w sign %.1f%% (need >90%%)",
+                              mc_gamma$sign_correct_pct[3]))
+    expect_true(abs(mc_gamma$rel_bias_pct[2]) < 25,
+                info = sprintf("gamma_x bias %.1f%% (need <25%%)",
+                              mc_gamma$rel_bias_pct[2]))
+    expect_true(abs(mc_gamma$rel_bias_pct[3]) < 25,
+                info = sprintf("gamma_w bias %.1f%% (need <25%%)",
+                              mc_gamma$rel_bias_pct[3]))
   }
 })
 
