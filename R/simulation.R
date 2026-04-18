@@ -274,25 +274,63 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
       pd <- self$product_data
 
       # Auto-generate BLP instruments from exogenous characteristics if
-      # the user has not supplied them. The identification logic: prices
-      # are endogenous (correlated with xi), so we need instruments that
-      # (a) shift markups (and thus prices) but (b) are uncorrelated with xi.
-      # BLP instruments satisfy this because rival product characteristics
-      # affect the competitive environment (and hence equilibrium markups)
-      # but are exogenous to product j's unobserved quality xi_j.
+      # the user has not supplied them. This follows pyblp's default
+      # SimulationResults.to_problem() behavior: demand instruments are built
+      # from demand-side exogenous variables plus supply shifters, and supply
+      # instruments are built from supply-side exogenous variables plus demand
+      # shifters. If the number of products varies across markets, a count
+      # shifter is also added through a column of ones.
       if (add_instruments) {
         has_demand_iv <- any(grepl("^demand_instruments", names(pd)))
         has_supply_iv <- any(grepl("^supply_instruments", names(pd)))
+        market_sizes <- as.integer(table(pd$market_ids))
+        add_count_shifter <- length(unique(market_sizes)) > 1L
 
-        # For demand: exclude price/shares (endogenous) from the instrument
-        # basis, then compute own-firm and rival-firm characteristic sums.
+        extract_exogenous <- function(X, drop_intercept = FALSE) {
+          if (is.null(X)) return(NULL)
+          x_names <- colnames(X)
+          keep <- !grepl("prices|shares", x_names, ignore.case = TRUE)
+          if (drop_intercept) {
+            keep <- keep & x_names != "(Intercept)"
+          }
+          if (!any(keep)) return(NULL)
+          X[, keep, drop = FALSE]
+        }
+
+        combine_basis <- function(primary, secondary = NULL) {
+          pieces <- list()
+          if (!is.null(primary)) pieces[[length(pieces) + 1L]] <- primary
+          if (!is.null(secondary)) {
+            secondary_names <- colnames(secondary)
+            primary_names <- if (!is.null(primary)) colnames(primary) else character(0)
+            keep_secondary <- !(secondary_names %in% primary_names)
+            if (any(keep_secondary)) {
+              pieces[[length(pieces) + 1L]] <- secondary[, keep_secondary, drop = FALSE]
+            }
+          }
+          if (add_count_shifter) {
+            pieces[[length(pieces) + 1L]] <- matrix(
+              1, nrow = nrow(pd), ncol = 1,
+              dimnames = list(NULL, "market_size_shifter")
+            )
+          }
+          if (length(pieces) == 0L) return(NULL)
+          do.call(cbind, pieces)
+        }
+
+        X1 <- product_formulations[[1]]$build_matrix(pd)
+        X1_exog <- extract_exogenous(X1, drop_intercept = TRUE)
+        X3_exog <- NULL
+        if (length(product_formulations) >= 3) {
+          X3 <- product_formulations[[3]]$build_matrix(pd)
+          X3_exog <- extract_exogenous(X3, drop_intercept = FALSE)
+        }
+
+        # For demand: use exogenous X1 variables plus any excluded supply
+        # shifters from X3 that are not already in X1.
         if (!has_demand_iv) {
-          X1 <- product_formulations[[1]]$build_matrix(pd)
-          x1_names <- colnames(X1)
-          exog_cols <- which(!grepl("prices|shares", x1_names, ignore.case = TRUE) &
-                              x1_names != "(Intercept)")
-          if (length(exog_cols) > 0) {
-            X_exog <- X1[, exog_cols, drop = FALSE]
+          X_exog <- combine_basis(X1_exog, X3_exog)
+          if (!is.null(X_exog)) {
             demand_iv <- build_blp_instruments(
               X_exog, pd$market_ids, pd$firm_ids
             )
@@ -302,14 +340,11 @@ BLPSimulationResults <- R6::R6Class("BLPSimulationResults",
           }
         }
 
-        # For supply: analogous instruments from cost-side characteristics
-        # (X3), used to form moment conditions E[Z_s' omega] = 0.
+        # For supply: use exogenous X3 variables plus any excluded demand
+        # shifters from X1 that are not already in X3.
         if (!has_supply_iv && length(product_formulations) >= 3) {
-          X3 <- product_formulations[[3]]$build_matrix(pd)
-          x3_names <- colnames(X3)
-          exog_cols3 <- which(!grepl("prices|shares", x3_names, ignore.case = TRUE))
-          if (length(exog_cols3) > 0) {
-            X_exog3 <- X3[, exog_cols3, drop = FALSE]
+          X_exog3 <- combine_basis(X3_exog, X1_exog)
+          if (!is.null(X_exog3)) {
             supply_iv <- build_blp_instruments(
               X_exog3, pd$market_ids, pd$firm_ids
             )
