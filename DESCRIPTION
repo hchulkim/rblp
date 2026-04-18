@@ -12,7 +12,8 @@ Description: Estimate, simulate, and analyze demand for differentiated
     Translated from the 'pyblp' Python package by Conlon and Gortmaker
     (2020) <doi:10.1287/mksc.2023.1440>.
 License: GPL (>= 2)
-URL: https://github.com/hchulkim/rblp
+URL: https://github.com/hchulkim/rblp,
+    https://hchulkim.github.io/rblp
 BugReports: https://github.com/hchulkim/rblp/issues
 Depends:
     R (>= 4.1.0)

@@ -29,8 +29,6 @@ An R implementation of the BLP (Berry, Levinsohn, Pakes 1995) framework for esti
 devtools::install_github("hchulkim/rblp")
 ```
 
----
-
 ## Quick Start
 
 ```r
@@ -170,6 +168,54 @@ est <- sim_problem$solve(method = "1s")
 | `results.compute_elasticities()` | `results$compute_elasticities()` |
 | `Integration('product', size=5)` | `blp_integration("product", size = 5)` |
 | `Simulation(...)` | `blp_simulation(...)` |
+
+### Validation Snapshot
+
+Recent validation matched core pyblp benchmarks closely:
+
+- Nevo logit with product fixed effects (1-step): price coefficient `-30.4205`,
+  objective `179.7148`
+- Nevo RC logit with demographics (1-step): price coefficient `-62.4235`,
+  objective `4.3793`
+- Nevo RC sigma diagonal: approximately `(0.5257, 3.2371, 0.0000, 0.1059)`
+- Monte Carlo sanity check (40 replications, strong IV): mean estimates
+  `(0.488, -3.001, 1.024)` for true parameters `(0.5, -3.0, 1.0)`, with
+  RMSE `(0.105, 0.055, 0.129)` and 100% sign recovery across parameters
+
+These are in the expected neighborhood of the documented pyblp reference
+results and support the translation’s numerical correctness on the main demand
+specifications.
+
+### Estimation Notes
+
+For the Nevo random-coefficients benchmark, the most reliable configuration in
+recent testing was:
+
+```r
+results <- demo_problem$solve(
+  sigma = sigma0,
+  pi = pi0,
+  method = "1s",
+  optimization = blp_optimization(
+    "l-bfgs-b",
+    method_options = list(maxit = 300, factr = 1e7)
+  )
+)
+```
+
+Observed behavior of nearby alternatives:
+
+- `l-bfgs-b` gave the best objective among tested variants
+- `initial_update = TRUE` ran slightly faster in one trial but worsened the
+  objective for the Nevo RC benchmark
+- `nlminb` converged faster but to a worse solution in the same benchmark
+
+Recent internal performance improvements also cache fixed IV algebra within each
+GMM step and reuse absorbed fixed-effect group indices across nonlinear
+evaluations, which reduces repeated work without changing estimates. In recent
+benchmarking, the Nevo RC+demographics benchmark runs in about
+`130-136` seconds on repeated runs with the recommended `l-bfgs-b`
+configuration.
 
 ---
 

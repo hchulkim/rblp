@@ -191,6 +191,35 @@ BLPProblem <- R6::R6Class("BLPProblem",
       for (step in seq_len(n_steps)) {
         rblp_message(sprintf("\n--- GMM Step %d/%d ---", step, n_steps))
 
+        # Precompute IV algebra that stays fixed within the current GMM step.
+        # This avoids rebuilding X'Z, X'ZW, and the IV bread inverse at every
+        # nonlinear objective evaluation.
+        demand_iv_cache <- NULL
+        supply_iv_cache <- NULL
+        MD <- self$MD
+        MS <- self$MS
+        if (!is.null(self$products$X1) && !is.null(self$products$ZD) && MD > 0) {
+          XZ_d <- crossprod(self$products$X1, self$products$ZD)
+          XZW_d <- XZ_d %*% W[seq_len(MD), seq_len(MD), drop = FALSE]
+          bread_d <- XZW_d %*% crossprod(self$products$ZD, self$products$X1)
+          demand_iv_cache <- list(
+            XZ = XZ_d,
+            XZW = XZW_d,
+            bread_inv = approximately_invert(bread_d)$inverse
+          )
+        }
+        if (self$K3 > 0 && !is.null(self$products$X3) && !is.null(self$products$ZS) && MS > 0) {
+          W_supply <- W[(MD + 1):(MD + MS), (MD + 1):(MD + MS), drop = FALSE]
+          XZ_s <- crossprod(self$products$X3, self$products$ZS)
+          XZW_s <- XZ_s %*% W_supply
+          bread_s <- XZW_s %*% crossprod(self$products$ZS, self$products$X3)
+          supply_iv_cache <- list(
+            XZ = XZ_s,
+            XZW = XZW_s,
+            bread_inv = approximately_invert(bread_s)$inverse
+          )
+        }
+
         # Build the GMM objective function that the nonlinear optimizer calls.
         # For each candidate theta, this: (1) runs the BLP contraction mapping
         # to recover delta(theta), (2) concentrates out beta via IV regression
@@ -202,7 +231,9 @@ BLPProblem <- R6::R6Class("BLPProblem",
           result <- private$compute_progress(
             theta_vec, params, last_delta, W,
             iteration, fp_type, scale_objective, center_moments,
-            micro_moments, error_behavior, error_punishment, processes
+            micro_moments, error_behavior, error_punishment, processes,
+            demand_iv_cache = demand_iv_cache,
+            supply_iv_cache = supply_iv_cache
           )
 
           if (!is.null(result$delta)) last_delta <<- result$delta
@@ -230,7 +261,9 @@ BLPProblem <- R6::R6Class("BLPProblem",
         progress <- private$compute_progress(
           theta, params, last_delta, W,
           iteration, fp_type, scale_objective, center_moments,
-          micro_moments, error_behavior, error_punishment, processes
+          micro_moments, error_behavior, error_punishment, processes,
+          demand_iv_cache = demand_iv_cache,
+          supply_iv_cache = supply_iv_cache
         )
         last_delta <- progress$delta
 
@@ -332,7 +365,8 @@ BLPProblem <- R6::R6Class("BLPProblem",
                                  iteration, fp_type, scale_objective,
                                  center_moments, micro_moments,
                                  error_behavior, error_punishment,
-                                 processes) {
+                                 processes, demand_iv_cache = NULL,
+                                 supply_iv_cache = NULL) {
       # Expand the compressed theta vector back into the full parameter matrices.
       # sigma is the K2 x K2 lower-triangular Cholesky factor of the random
       # coefficient covariance (Sigma = sigma * sigma'). pi is the K2 x D
@@ -465,14 +499,10 @@ BLPProblem <- R6::R6Class("BLPProblem",
       # dummies in the regression but is computationally cheaper.
       delta_iv <- delta_new
       if (!is.null(private$absorb_groups_)) {
-        grp <- private$absorb_groups_
-        # Use pre-computed group indices for fast demeaning
-        grp_idx <- split(seq_len(N), grp)
-        grp_sizes <- lengths(grp_idx)
+        grp_idx <- private$absorb_group_indices_
 
         # Demean delta: subtract group mean
-        for (g in names(grp_idx)) {
-          idx_g <- grp_idx[[g]]
+        for (idx_g in grp_idx) {
           gm <- mean(delta_iv[idx_g])
           delta_iv[idx_g] <- delta_iv[idx_g] - gm
         }
@@ -482,8 +512,7 @@ BLPProblem <- R6::R6Class("BLPProblem",
         # because the Jacobian feeds into G = Z' (d_xi/d_theta) / N which must
         # be computed in the same demeaned space as the moments g = Z' xi / N.
         if (!is.null(full_xi_jac)) {
-          for (g in names(grp_idx)) {
-            idx_g <- grp_idx[[g]]
+          for (idx_g in grp_idx) {
             gm_j <- colMeans(full_xi_jac[idx_g, , drop = FALSE])
             full_xi_jac[idx_g, ] <- sweep(full_xi_jac[idx_g, , drop = FALSE], 2, gm_j)
           }
@@ -502,7 +531,10 @@ BLPProblem <- R6::R6Class("BLPProblem",
       # The residual_jacobian is d_xi/d_theta after accounting for the
       # concentration: d_xi/d_theta = d_delta/d_theta - X1 * d_beta/d_theta.
       # This "concentrated Jacobian" is what enters the gradient formula.
-      demand_iv <- iv_estimate(X1, ZD, W_demand, delta_iv, full_xi_jac)
+      demand_iv <- iv_estimate(
+        X1, ZD, W_demand, delta_iv, full_xi_jac,
+        precomputed = demand_iv_cache
+      )
       beta <- demand_iv$parameters
       xi <- demand_iv$residuals
       xi_jac_concentrated <- demand_iv$residual_jacobian
@@ -515,7 +547,10 @@ BLPProblem <- R6::R6Class("BLPProblem",
         X3 <- self$products$X3
         ZS <- self$products$ZS
         W_supply <- W[(MD + 1):(MD + MS), (MD + 1):(MD + MS), drop = FALSE]
-        supply_iv <- iv_estimate(X3, ZS, W_supply, costs_vec, NULL)
+        supply_iv <- iv_estimate(
+          X3, ZS, W_supply, costs_vec, NULL,
+          precomputed = supply_iv_cache
+        )
         gamma <- supply_iv$parameters
         omega <- supply_iv$residuals
       }

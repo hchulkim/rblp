@@ -8,6 +8,7 @@
 .Ruserdata
 .RData
 .Rproj.user/
+.R-lib/
 .Data
 *-Ex.R
 /*.tar.gz
@@ -30,3 +31,6 @@ vignettes/*_files/
 # Build artifacts
 check/
 .claude/
+.cache/
+.tmp/
+.home/

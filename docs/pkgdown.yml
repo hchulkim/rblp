@@ -1,0 +1,18 @@
+pandoc: 3.1.11.1
+pkgdown: 2.1.1
+pkgdown_sha: ~
+articles:
+  advanced-features: advanced-features.html
+  baby-blp-replication: baby-blp-replication.html
+  data-preparation: data-preparation.html
+  logit-nested-logit: logit-nested-logit.html
+  mixtape-exercises: mixtape-exercises.html
+  monte-carlo-validation: monte-carlo-validation.html
+  post-estimation-mergers: post-estimation-mergers.html
+  random-coefficients: random-coefficients.html
+  rblp-tutorial: rblp-tutorial.html
+  simulation-monte-carlo: simulation-monte-carlo.html
+last_built: 2026-04-18T03:28Z
+urls:
+  reference: https://hchulkim.github.io/rblp/reference
+  article: https://hchulkim.github.io/rblp/articles

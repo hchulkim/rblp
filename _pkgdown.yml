@@ -8,7 +8,8 @@ home:
   title: "rblp: BLP Demand Estimation in R"
   description: >
     Estimate, simulate, and analyze demand for differentiated products
-    using BLP random coefficients logit models. Translated from pyblp.
+    using BLP random coefficients logit models. Translated from pyblp and
+    validated against pyblp-style benchmarks and Monte Carlo checks.
 
 development:
   mode: auto
@@ -77,7 +78,7 @@ articles:
   - title: "Tutorials & Exercises"
     desc: >
       Hands-on tutorials for learning BLP estimation, including Mixtape Sessions
-      exercises and Monte Carlo simulation studies.
+      exercises, pyblp-style validation, and Monte Carlo simulation studies.
     navbar: ~
     contents:
       - mixtape-exercises

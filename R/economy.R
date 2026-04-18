@@ -159,6 +159,7 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
               }
             }
             private$absorb_groups_ <- grp
+            private$absorb_group_indices_ <- split(seq_len(self$N), grp)
           }
         }
       }
@@ -377,6 +378,7 @@ BLPEconomy <- R6::R6Class("BLPEconomy",
     product_data_ = NULL,
     agent_data_ = NULL,
     integration_ = NULL,
-    absorb_groups_ = NULL
+    absorb_groups_ = NULL,
+    absorb_group_indices_ = NULL
   )
 )

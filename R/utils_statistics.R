@@ -7,9 +7,11 @@
 #' @param W Weighting matrix (M x M)
 #' @param y Dependent variable (N x 1)
 #' @param jacobian Optional Jacobian of y w.r.t. nonlinear parameters (N x P)
+#' @param precomputed Optional list with reusable linear algebra pieces:
+#'   `XZ`, `bread_inv`, and `XZW`
 #' @return List with parameters, residuals, covariances, and residual_jacobian
 #' @keywords internal
-iv_estimate <- function(X, Z, W, y, jacobian = NULL) {
+iv_estimate <- function(X, Z, W, y, jacobian = NULL, precomputed = NULL) {
   # Instrumental variables (2SLS/GMM) estimation of linear parameters beta,
   # concentrating them out of the GMM objective. In BLP, the "dependent
   # variable" y is the vector of mean utilities delta (which depends on the
@@ -18,17 +20,21 @@ iv_estimate <- function(X, Z, W, y, jacobian = NULL) {
   # The GMM estimator for linear parameters given weighting matrix W is:
   #   beta = (X'Z W Z'X)^{-1} X'Z W Z'y
   # This is equivalent to 2SLS when W = (Z'Z)^{-1}.
-  XZ <- crossprod(X, Z)    # K x M
-  ZX <- t(XZ)              # M x K
-  ZY <- crossprod(Z, y)    # M x 1
+  XZ <- precomputed$XZ %||% crossprod(X, Z)    # K x M
+  ZX <- t(XZ)                                   # M x K
+  XZW <- precomputed$XZW %||% (XZ %*% W)       # K x M
+  ZY <- crossprod(Z, y)                         # M x 1
 
   # "Bread" matrix of the IV sandwich -- the precision of the IV estimator.
   # Inverting this gives the leading term of the parameter covariance.
-  bread <- XZ %*% W %*% ZX
-  bread_inv <- approximately_invert(bread)$inverse
+  bread_inv <- precomputed$bread_inv
+  if (is.null(bread_inv)) {
+    bread <- XZW %*% ZX
+    bread_inv <- approximately_invert(bread)$inverse
+  }
 
   # Closed-form IV/GMM estimate of the linear parameters
-  params <- as.numeric(bread_inv %*% XZ %*% W %*% ZY)
+  params <- as.numeric(bread_inv %*% XZW %*% ZY)
   residuals <- as.numeric(y - X %*% params)
 
   residual_jacobian <- NULL
@@ -40,7 +46,7 @@ iv_estimate <- function(X, Z, W, y, jacobian = NULL) {
     # rule gives the expression below. This Jacobian is needed for the
     # analytic gradient of the GMM objective.
     ZJ <- crossprod(Z, jacobian)  # M x P
-    residual_jacobian <- jacobian - X %*% (bread_inv %*% XZ %*% W %*% ZJ)
+    residual_jacobian <- jacobian - X %*% (bread_inv %*% XZW %*% ZJ)
   }
 
   list(
