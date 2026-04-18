@@ -152,7 +152,7 @@ res_rc$summary_table()[, c("parameter", "estimate", "se")]
 #>    parameter  estimate           se
 #> 1     prices 0.1674598 1.168622e-01
 #> 2  promotion 0.3078427 8.807058e-02
-#> 3 sigma[1,1] 1.0000000 4.124677e+16
+#> 3 sigma[1,1] 1.0000000 4.225193e+16
 ```
 
 ``` r
