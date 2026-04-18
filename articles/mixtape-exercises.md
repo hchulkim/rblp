@@ -212,7 +212,7 @@ cat("=== rblp OLS Logit Results ===\n\n")
 print(ols_results)
 #> BLP Estimation Results
 #>   Method: 1S GMM
-#>   Objective: 1.336262e-24
+#>   Objective: 1.591118e-24
 #>   Optimization converged: TRUE
 #>   FP converged: TRUE (94 total iterations)
 #> 
