@@ -33,7 +33,8 @@ surplus, markups, diversion ratios, and simulate the effects of mergers.
 ### Tutorials & Exercises
 
 Hands-on tutorials for learning BLP estimation, including Mixtape
-Sessions exercises and Monte Carlo simulation studies.
+Sessions exercises, pyblp-style validation, and Monte Carlo simulation
+studies.
 
 - [Mixtape Demand Estimation
   Exercises](https://hchulkim.github.io/rblp/articles/mixtape-exercises.md):
